@@ -129,6 +129,8 @@ auth:
   jwt:
     # Secret key for token generation and verification. Required: a secret
     # committed to the repository is a secret your users can forge tokens with.
+    # Loco decodes this as base64 to derive the HMAC key — generate one with
+    # `openssl rand -base64 32` and set JWT_SECRET to that value.
     secret: <%= get_env(name="JWT_SECRET") %>
     # Token expiration time in seconds
     expiration: 604800 # 7 days

@@ -5,6 +5,7 @@ import { Provider } from 'react-redux'
 import { RouterProvider } from 'react-router'
 import { router } from './routes'
 import { store } from './store'
+import './index.css'
 
 const root = document.getElementById('root')
 

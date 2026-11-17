@@ -106,7 +106,8 @@ settings:
 auth:
   # JWT authentication
   jwt:
-    # Secret key for token generation and verification
+    # Secret key for token generation and verification. Must be valid base64 —
+    # Loco decodes it into the HMAC signing key.
     secret: 6RFun4H7FfkUP7Fcjop5
     # Token expiration time in seconds
     expiration: 604800 # 7 days

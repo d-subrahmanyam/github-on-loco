@@ -52,6 +52,10 @@ const repositoriesSlice = createSlice({
     clearCreateError(state) {
       state.createError = null
     },
+    // Cleared on logout so the next user never sees the previous user's repos.
+    reset() {
+      return initialState
+    },
   },
 })
 
@@ -64,6 +68,7 @@ export const {
   createSucceeded,
   createFailed,
   clearCreateError,
+  reset,
 } = repositoriesSlice.actions
 
 export default repositoriesSlice.reducer

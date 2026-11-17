@@ -73,7 +73,9 @@ The production-style build serves the SPA from Loco: run `pnpm build` in
 fallback (see the static middleware in `config/development.yaml`).
 
 A production JWT secret has no default — set `JWT_SECRET` before deploying.
-The development config falls back to a clearly-labelled dev-only value.
+Loco decodes the secret as **base64** to derive its HMAC key, so generate one
+with `openssl rand -base64 32`; a non-base64 value makes login fail with 401.
+The development config uses a clearly-labelled dev-only base64 value.
 
 ## HTTP surface
 

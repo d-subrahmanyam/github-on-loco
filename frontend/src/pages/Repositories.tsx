@@ -1,3 +1,4 @@
+import { FaGithub, FaLink, FaLock, FaPlus, FaTimes, FaUnlock } from 'react-icons/fa'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
@@ -7,6 +8,7 @@ import {
   createRequested,
   listRequested,
 } from '../store/repositoriesSlice'
+import { card, codeBox, input, label, primaryButton } from '../ui'
 
 /** Dashboard: list the current user's repositories and create new ones. */
 export function Repositories() {
@@ -33,70 +35,117 @@ export function Repositories() {
   }
 
   return (
-    <div>
-      <h1>Your repositories</h1>
-
-      <form onSubmit={handleSubmit}>
-        <h2>New repository</h2>
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <FaGithub className="text-3xl text-slate-900" />
         <div>
-          <label htmlFor="repo-name">Name</label>
-          <input
-            id="repo-name"
-            required
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="hello-world"
-          />
+          <h1 className="text-2xl font-semibold">Your repositories</h1>
+          <p className="text-sm text-slate-600">Create a repo and start pushing code.</p>
         </div>
-        <div>
-          <label htmlFor="repo-description">Description</label>
-          <input
-            id="repo-description"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-          />
-        </div>
-        <div>
-          <label htmlFor="repo-private">
-            <input
-              id="repo-private"
-              type="checkbox"
-              checked={isPrivate}
-              onChange={(event) => setIsPrivate(event.target.checked)}
-            />
-            Private
-          </label>
-        </div>
-        <button type="submit" disabled={creating}>
-          {creating ? 'Creating…' : 'Create repository'}
-        </button>
-        {createError && (
-          <p role="alert" onClick={() => dispatch(clearCreateError())}>
-            {createError}
-          </p>
-        )}
-      </form>
+      </div>
 
-      {loading && <p>Loading repositories…</p>}
-      {error && <p role="alert">{error}</p>}
-      {!loading && items.length === 0 && (
-        <p>No repositories yet. Create your first one above.</p>
-      )}
-
-      <ul>
-        {items.map((repo) => (
-          <li key={repo.id}>
-            <Link to={`/repos/${repo.owner}/${repo.name}`}>
-              {repo.owner}/{repo.name}
-            </Link>
-            {repo.description && <span> — {repo.description}</span>}
-            {repo.is_private && <small> (private)</small>}
+      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+        <section className={`${card} h-fit p-6`}>
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+            <FaPlus className="text-blue-600" /> New repository
+          </h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <code>{repo.clone_url}</code>
+              <label htmlFor="repo-name" className={label}>
+                Name
+              </label>
+              <input
+                id="repo-name"
+                required
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="hello-world"
+                className={`${input} mt-1`}
+              />
             </div>
-          </li>
-        ))}
-      </ul>
+            <div>
+              <label htmlFor="repo-description" className={label}>
+                Description
+              </label>
+              <input
+                id="repo-description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="What is this repo about?"
+                className={`${input} mt-1`}
+              />
+            </div>
+            <label htmlFor="repo-private" className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                id="repo-private"
+                type="checkbox"
+                checked={isPrivate}
+                onChange={(event) => setIsPrivate(event.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              {isPrivate ? <FaLock className="text-amber-600" /> : <FaUnlock className="text-slate-400" />}
+              Private
+            </label>
+            <button type="submit" disabled={creating} className={`${primaryButton} w-full`}>
+              <FaPlus />
+              {creating ? 'Creating…' : 'Create repository'}
+            </button>
+            {createError && (
+              <div className="flex items-start justify-between gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                <span>{createError}</span>
+                <button
+                  type="button"
+                  onClick={() => dispatch(clearCreateError())}
+                  aria-label="Dismiss error"
+                >
+                  <FaTimes />
+                </button>
+              </div>
+            )}
+          </form>
+        </section>
+
+        <section className={`${card} p-6`}>
+          <h2 className="mb-4 text-lg font-semibold">Repositories</h2>
+          {loading && <p className="text-sm text-slate-500">Loading repositories…</p>}
+          {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+          {!loading && items.length === 0 && (
+            <p className="text-sm text-slate-500">
+              No repositories yet. Create your first one from the form on the left.
+            </p>
+          )}
+          <ul className="divide-y divide-slate-200">
+            {items.map((repo) => (
+              <li key={repo.id} className="py-4 first:pt-0 last:pb-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    to={`/repos/${repo.owner}/${repo.name}`}
+                    className="font-semibold text-blue-600 hover:underline"
+                  >
+                    {repo.owner}/{repo.name}
+                  </Link>
+                  {repo.is_private ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                      <FaLock /> Private
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                      <FaUnlock /> Public
+                    </span>
+                  )}
+                </div>
+                {repo.description && (
+                  <p className="mt-1 text-sm text-slate-600">{repo.description}</p>
+                )}
+                <div className={`${codeBox} mt-2 flex items-center gap-2`}>
+                  <FaLink />
+                  <span className="truncate">{repo.clone_url}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
     </div>
   )
 }

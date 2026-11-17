@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
 // The backend reads its port from `PORT` (see `config/development.yaml`:
 // `get_env(name="PORT", default="5150")`), so this proxy has to read the same
@@ -13,7 +14,7 @@ export default defineConfig(({ mode }) => {
   const backendPort = env.PORT || '5150'
 
   return {
-    plugins: [react()],
+    plugins: [react(), tailwindcss()],
     build: { outDir: 'dist' },
     server: {
       port: 5173,

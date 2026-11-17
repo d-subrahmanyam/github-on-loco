@@ -117,8 +117,9 @@ settings:
 auth:
   # JWT authentication
   jwt:
-    # Secret key for token generation and verification
-    secret: <%= get_env(name="JWT_SECRET", default="dev-only-jwt-secret-change-me") %>
+    # Loco decodes this as base64 to derive the HMAC key, so it MUST be valid
+    # base64. This value is the base64 of "dev-only-jwt-secret-change-me".
+    secret: ZGV2LW9ubHktand0LXNlY3JldC1jaGFuZ2UtbWU=
     # Token expiration time in seconds
     expiration: 604800 # 7 days
     # Where to read the token from. Omitted => `Authorization: Bearer <token>`.
