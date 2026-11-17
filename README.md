@@ -117,6 +117,7 @@ cargo fmt --all
 cargo clippy --all-targets -- -D warnings
 cargo test
 (cd frontend && pnpm build)
+(cd frontend && pnpm test)
 ```
 
 See [docs/testing.md](docs/testing.md) for the test database and

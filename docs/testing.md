@@ -50,7 +50,10 @@ for obtaining a JWT and building the `Authorization` header.
 - **Issues**: per-repo numbering, label attachment/validation, state
   transitions, comments and label CRUD; request tests cover the full issue
   lifecycle including authentication failures for blank titles/bad labels.
-- **Frontend**: `pnpm build` type-checks the Redux Saga slices, sagas and pages.
+- **Frontend**: Vitest + Testing Library (`pnpm test` in `frontend/`) cover the
+  repository/issue/token sagas against a mocked `fetch` (including stale-response
+  protection), the password visibility toggle, token storage and logout routing,
+  and rendering of the issue list. `pnpm build` still type-checks everything.
 - **Tasks**: user create/delete.
 
 ## Writing a new request test

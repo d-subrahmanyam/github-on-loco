@@ -68,7 +68,7 @@ pub async fn revoke(
 ) -> Result<Response> {
     let user = users::Model::find_by_pid(&ctx.db, &auth.claims.pid).await?;
     personal_access_tokens::Entity::revoke(&ctx.db, id, user.id).await?;
-    format::empty()
+    format::empty_json()
 }
 
 /// Routes registered by `App::routes`.
