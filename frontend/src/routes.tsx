@@ -9,6 +9,8 @@ import { Commits } from './pages/Commits'
 import { Home } from './pages/Home'
 import { IssueDetail } from './pages/IssueDetail'
 import { IssueList } from './pages/IssueList'
+import { PullDetail } from './pages/PullDetail'
+import { PullList } from './pages/PullList'
 import { Repositories } from './pages/Repositories'
 import { RepoCode } from './pages/RepoCode'
 import { Tokens } from './pages/Tokens'
@@ -41,6 +43,8 @@ export const router = createBrowserRouter([
           { path: 'branches', element: <Branches /> },
           { path: 'issues', element: <IssueList /> },
           { path: 'issues/:number', element: <IssueDetail /> },
+          { path: 'pulls', element: <PullList /> },
+          { path: 'pulls/:number', element: <PullDetail /> },
         ],
       },
     ],

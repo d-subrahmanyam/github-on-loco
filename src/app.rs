@@ -53,12 +53,16 @@ impl Hooks for App {
         AppRoutes::with_default_routes() // controller routes below
             .add_route(controllers::tokens::routes())
             .add_route(controllers::issues::routes())
+            .add_route(controllers::pulls::routes())
             .add_route(controllers::git_browse::routes())
             .add_route(controllers::auth::routes())
             .add_route(controllers::repositories::routes())
             .add_route(controllers::git_http::routes())
     }
     async fn connect_workers(ctx: &AppContext, queue: &Queue) -> Result<()> {
+        queue
+            .register(crate::workers::merge_pull_request::Worker::build(ctx))
+            .await?;
         queue.register(DownloadWorker::build(ctx)).await?;
         Ok(())
     }

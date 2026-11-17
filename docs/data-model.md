@@ -67,6 +67,17 @@ Issue numbers are allocated as `MAX(number) + 1` inside the same transaction as
 the insert. Labels are validated to belong to the issue's repository before
 being attached.
 
+### `pull_requests`, `review_comments` (Phase 3)
+
+| Table | Columns |
+|---|---|
+| `pull_requests` | `repository_id`, `user_id` (author), `number`, `title`, `body`, `state` (`open`/`closed`/`merged`), `head_ref`, `head_sha`, `base_ref`, `merged_commit_sha`, `merged_at` — `unique(repository_id, number)` |
+| `review_comments` | `pull_request_id`, `user_id`, `body`, `path` (nullable), `line` (nullable) |
+
+The head is stored as both a ref and an immutable SHA resolved when the PR is
+opened: compare and merge both use the SHA, so a later force-push cannot change
+what was reviewed. `merge_commit_sha` records the resulting merge commit.
+
 ## Target model (GitHub-shaped)
 
 These tables are *planned*, not implemented. Add them with
@@ -79,9 +90,9 @@ personal_access_tokens (existing)
 
 collaborators          repository_id, user_id, role(admin|write|read)   [unique pair]
 
-pull_requests          repository_id, number, author_id, head_ref, head_sha,
-                       base_ref, title, body, state(open|closed|merged), merged_at
-pr_reviews, review_comments
+pull_requests          (existing)   + merged_commit_sha
+review_comments        (existing)
+pr_reviews                                                   (Phase 4, optional)
 stars                  user_id, repository_id
 forks                  source_repo_id, repository_id
 events                 actor_id, repository_id, kind, payload(jsonb), created_at

@@ -9,11 +9,13 @@
 //! Git remains the source of truth for repository contents. Nothing here writes
 //! to a repository.
 
+use crate::dtos::pulls::{CompareResult, DiffFile};
 use crate::dtos::repositories::{Branch, Commit, CommitDetail, TreeEntry};
 use crate::models::repositories;
 use loco_rs::prelude::*;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::process::Stdio;
+use std::process::{Output, Stdio};
 use tokio::process::Command;
 
 /// A git revision name that is safe to pass as a command-line argument.
@@ -63,17 +65,22 @@ impl GitRepo {
         &self.path
     }
 
-    /// Runs `git -C <repo> <args>`, capturing both output streams.
-    async fn git(&self, args: &[&str]) -> Result<Vec<u8>> {
-        let output = Command::new("git")
+    /// Runs `git -C <repo> <args>`, returning the raw process output so callers
+    /// can inspect a non-zero exit status (needed for conflict detection).
+    async fn git_output(&self, args: &[&str]) -> Result<Output> {
+        Command::new("git")
             .arg("-C")
             .arg(&self.path)
             .args(args)
             .stdin(Stdio::null())
             .output()
             .await
-            .map_err(|e| Error::string(&format!("failed to run git: {e}")))?;
+            .map_err(|e| Error::string(&format!("failed to run git: {e}")))
+    }
 
+    /// Runs `git -C <repo> <args>`, capturing both output streams.
+    async fn git(&self, args: &[&str]) -> Result<Vec<u8>> {
+        let output = self.git_output(args).await?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             tracing::warn!(?args, %stderr, "git command failed");
@@ -255,6 +262,254 @@ impl GitRepo {
         }
         self.git(&["show", &format!("{reference}:{path}")]).await
     }
+
+    /// Three-dot comparison between two revisions: commits and files in
+    /// `head` that are not in `base`, measured from their merge base.
+    ///
+    /// # Errors
+    /// Returns a 400 for unsafe revisions or unrelated histories.
+    pub async fn compare(&self, base: &str, head: &str) -> Result<CompareResult> {
+        if !is_safe_ref(base) || !is_safe_ref(head) {
+            return bad_request("invalid revision");
+        }
+        let base_sha = self.resolve(base).await?;
+        let head_sha = self.resolve(head).await?;
+
+        let out = self.git(&["merge-base", &base_sha, &head_sha]).await?;
+        let merge_base = String::from_utf8_lossy(&out).trim().to_owned();
+        if merge_base.is_empty() {
+            return bad_request("the branches have no common ancestor");
+        }
+
+        // `git rev-list --left-right --count A...B` prints "left right":
+        // commits reachable only from A, then only from B.
+        let out = self
+            .git(&[
+                "rev-list",
+                "--left-right",
+                "--count",
+                &format!("{base_sha}...{head_sha}"),
+            ])
+            .await?;
+        let counts = String::from_utf8_lossy(&out);
+        let mut fields = counts.split_whitespace();
+        let behind_by = fields.next().and_then(|v| v.parse().ok()).unwrap_or(0);
+        let ahead_by = fields.next().and_then(|v| v.parse().ok()).unwrap_or(0);
+
+        let out = self
+            .git(&[
+                "log",
+                "--format=%H%x09%an%x09%aI%x09%s",
+                &format!("{base_sha}..{head_sha}"),
+            ])
+            .await?;
+        let commits = String::from_utf8_lossy(&out)
+            .lines()
+            .filter_map(|line| {
+                let mut parts = line.splitn(4, '\t');
+                Some(Commit {
+                    sha: parts.next()?.to_owned(),
+                    author: parts.next()?.to_owned(),
+                    committed_at: parts.next()?.to_owned(),
+                    message: parts.next().unwrap_or("").to_owned(),
+                })
+            })
+            .collect();
+
+        // `--no-renames` keeps one path per row, so all three outputs can be
+        // joined on the path without parse ambiguity.
+        let statuses = parse_name_status(&String::from_utf8_lossy(
+            &self
+                .git(&[
+                    "-c",
+                    "core.quotePath=false",
+                    "diff",
+                    "--no-renames",
+                    "--name-status",
+                    "--no-color",
+                    "--no-ext-diff",
+                    &merge_base,
+                    &head_sha,
+                    "--",
+                ])
+                .await?,
+        ));
+        let numstats = parse_numstat(&String::from_utf8_lossy(
+            &self
+                .git(&[
+                    "-c",
+                    "core.quotePath=false",
+                    "diff",
+                    "--no-renames",
+                    "--numstat",
+                    "--no-color",
+                    "--no-ext-diff",
+                    &merge_base,
+                    &head_sha,
+                    "--",
+                ])
+                .await?,
+        ));
+        let patches = parse_patches(&String::from_utf8_lossy(
+            &self
+                .git(&[
+                    "-c",
+                    "core.quotePath=false",
+                    "diff",
+                    "--no-renames",
+                    "--unified=3",
+                    "--no-color",
+                    "--no-ext-diff",
+                    &merge_base,
+                    &head_sha,
+                    "--",
+                ])
+                .await?,
+        ));
+
+        let files = statuses
+            .into_iter()
+            .map(|(path, status)| {
+                let (additions, deletions) = numstats.get(&path).copied().unwrap_or((0, 0));
+                DiffFile {
+                    patch: patches.get(&path).cloned().unwrap_or_default(),
+                    path,
+                    status,
+                    additions,
+                    deletions,
+                }
+            })
+            .collect();
+
+        Ok(CompareResult {
+            base: merge_base,
+            head: head_sha,
+            ahead_by,
+            behind_by,
+            commits,
+            files,
+        })
+    }
+
+    /// Merges `head_sha` into `base_ref` inside the bare repository and returns
+    /// the new commit SHA.
+    ///
+    /// This uses git plumbing rather than a worktree: `merge-tree` computes the
+    /// merged tree, `commit-tree` creates a merge commit with two parents, and
+    /// `update-ref` advances the branch with a compare-and-swap guard so a
+    /// concurrent push cannot be overwritten.
+    ///
+    /// # Errors
+    /// Returns a 400 for unsafe refs, a conflict, or no common ancestor.
+    pub async fn merge(&self, base_ref: &str, head_sha: &str, message: &str) -> Result<String> {
+        if !is_safe_ref(base_ref) || !is_safe_ref(head_sha) {
+            return bad_request("invalid revision");
+        }
+        let base_sha = self.resolve(base_ref).await?;
+        let head_sha = self.resolve(head_sha).await?;
+
+        let output = self
+            .git_output(&["merge-tree", "--write-tree", &base_sha, &head_sha])
+            .await?;
+        if !output.status.success() {
+            let text = String::from_utf8_lossy(&output.stdout);
+            let detail = text
+                .lines()
+                .filter(|line| line.starts_with("CONFLICT"))
+                .take(3)
+                .collect::<Vec<_>>()
+                .join("; ");
+            return bad_request(if detail.is_empty() {
+                "unable to merge these branches".to_owned()
+            } else {
+                format!("merge conflict: {detail}")
+            });
+        }
+        let tree = String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .next()
+            .unwrap_or("")
+            .trim()
+            .to_owned();
+
+        let out = self
+            .git(&[
+                "-c",
+                "user.name=github-loco",
+                "-c",
+                "user.email=github-loco@localhost",
+                "commit-tree",
+                &tree,
+                "-p",
+                &base_sha,
+                "-p",
+                &head_sha,
+                "-m",
+                message,
+            ])
+            .await?;
+        let commit = String::from_utf8_lossy(&out).trim().to_owned();
+
+        self.git(&[
+            "update-ref",
+            &format!("refs/heads/{base_ref}"),
+            &commit,
+            &base_sha,
+        ])
+        .await?;
+        Ok(commit)
+    }
+}
+
+/// Maps `git diff --name-status` rows to `path -> status`.
+fn parse_name_status(text: &str) -> BTreeMap<String, String> {
+    text.lines()
+        .filter_map(|line| {
+            let (code, path) = line.split_once('\t')?;
+            let status = match code.chars().next().unwrap_or('M') {
+                'A' | 'C' => "added",
+                'D' => "deleted",
+                'R' => "renamed",
+                _ => "modified",
+            };
+            Some((path.to_owned(), status.to_owned()))
+        })
+        .collect()
+}
+
+/// Maps `git diff --numstat` rows to `path -> (additions, deletions)`.
+fn parse_numstat(text: &str) -> BTreeMap<String, (i64, i64)> {
+    text.lines()
+        .filter_map(|line| {
+            let mut parts = line.splitn(3, '\t');
+            let added = parts.next()?.parse().unwrap_or(0);
+            let deleted = parts.next()?.parse().unwrap_or(0);
+            let path = parts.next()?;
+            Some((path.to_owned(), (added, deleted)))
+        })
+        .collect()
+}
+
+/// Splits a unified diff into `path -> patch` and caps each patch at 80 lines.
+fn parse_patches(text: &str) -> BTreeMap<String, String> {
+    let mut result = BTreeMap::new();
+    for chunk in text.split("diff --git ").skip(1) {
+        let path = chunk
+            .lines()
+            .find_map(|line| line.strip_prefix("+++ b/"))
+            .or_else(|| chunk.lines().find_map(|line| line.strip_prefix("--- a/")))
+            .unwrap_or("")
+            .to_owned();
+        if path.is_empty() {
+            continue;
+        }
+        let patch = format!(
+            "diff --git {chunk}",
+            chunk = chunk.lines().take(80).collect::<Vec<_>>().join("\n")
+        );
+        result.insert(path, patch);
+    }
+    result
 }
 
 #[cfg(test)]
@@ -293,5 +548,40 @@ mod tests {
         for path in ["/etc/passwd", "../secret", "a/../b", "http://evil", "a\0b"] {
             assert!(!is_safe_path(path), "expected {path:?} to be rejected");
         }
+    }
+
+    #[test]
+    fn parses_name_status() {
+        let map = parse_name_status("A\tnew.txt\nM\tREADME.md\nD\told.txt\n");
+        assert_eq!(map.get("new.txt").map(String::as_str), Some("added"));
+        assert_eq!(map.get("README.md").map(String::as_str), Some("modified"));
+        assert_eq!(map.get("old.txt").map(String::as_str), Some("deleted"));
+    }
+
+    #[test]
+    fn parses_numstat_including_binary_files() {
+        let map = parse_numstat("3\t1\tREADME.md\n-\t-\timage.png\n");
+        assert_eq!(map.get("README.md"), Some(&(3, 1)));
+        assert_eq!(map.get("image.png"), Some(&(0, 0)));
+    }
+
+    #[test]
+    fn parses_patches_and_handles_deleted_files() {
+        let diff = concat!(
+            "diff --git a/README.md b/README.md\n",
+            "--- a/README.md\n",
+            "+++ b/README.md\n",
+            "@@ -1 +1 @@\n",
+            "-old\n",
+            "+new\n",
+            "diff --git a/old.txt b/old.txt\n",
+            "--- a/old.txt\n",
+            "+++ /dev/null\n",
+            "@@ -1 +0,0 @@\n",
+            "-gone\n",
+        );
+        let map = parse_patches(diff);
+        assert!(map["README.md"].contains("+new"));
+        assert!(map["old.txt"].contains("-gone"));
     }
 }

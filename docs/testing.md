@@ -14,9 +14,10 @@ true`, so **each boot rebuilds the test database**. Set up all data inside the
 `request::<App, _, _>(|request, ctx| ...)` closure; data created in a separate
 boot will be gone.
 
-Redis is configured because the dev queue is Redis. Tests do not enqueue work
-at present, but the app boots the queue provider, so Redis must be reachable
-(or use the test config's settings).
+Redis is configured because the dev queue is Redis, and the app boots the queue
+provider on test startup. Jobs themselves run inline: `config/test.yaml` uses
+`ForegroundBlocking`, so `perform_later` completes before the assertion runs and
+the merge worker is exercised synchronously by the PR request tests.
 
 ## Layers and where they live
 
@@ -25,7 +26,7 @@ at present, but the app boots the queue provider, so Redis must be reachable
 | Validation, token format, git path safety, content-type mapping | `#[cfg(test)] mod tests` inside `src/` | no |
 | Model queries and transitions | `tests/models/` | Postgres |
 | HTTP contract | `tests/requests/` | Postgres, Redis, `git` binary |
-| Tasks / workers | `tests/tasks/`, `tests/workers/` | Postgres |
+| Tasks / workers | `tests/tasks/`; the merge worker is exercised through `tests/requests/pulls.rs` in `ForegroundBlocking` mode | Postgres, `git` |
 
 `tests/requests/support.rs` provides `TestRepoRoot`, which points
 `REPO_BASE_DIR` at a temporary directory *before* the app boots and removes it
@@ -50,10 +51,16 @@ for obtaining a JWT and building the `Authorization` header.
 - **Issues**: per-repo numbering, label attachment/validation, state
   transitions, comments and label CRUD; request tests cover the full issue
   lifecycle including authentication failures for blank titles/bad labels.
+- **Pull requests**: model tests for numbering/state/merge recording and
+  review-comment scoping; request tests exercise the full flow against a real
+  bare repo (open → compare → comment → merge → browse the merged file), private
+  visibility, auth requirements and a genuine merge conflict that leaves the PR
+  open. `support::seed_branch_commit` builds divergent branches for these tests.
 - **Frontend**: Vitest + Testing Library (`pnpm test` in `frontend/`) cover the
-  repository/issue/token sagas against a mocked `fetch` (including stale-response
-  protection), the password visibility toggle, token storage and logout routing,
-  and rendering of the issue list. `pnpm build` still type-checks everything.
+  repository/issue/pull/token sagas against a mocked `fetch` (including
+  stale-response protection), the password visibility toggle, token storage and
+  logout routing, and rendering of the issue and PR lists. `pnpm build` still
+  type-checks everything.
 - **Tasks**: user create/delete.
 
 ## Writing a new request test

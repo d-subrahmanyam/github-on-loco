@@ -44,6 +44,42 @@ fn git(args: &[&str], dir: &Path) {
     assert!(status.success(), "git {args:?} failed in {}", dir.display());
 }
 
+/// Clones a bare repo, commits one file on `branch`, and pushes it. When
+/// `create` is false the branch must already exist (useful for making `main`
+/// diverge so a merge conflicts).
+pub fn seed_branch_commit(bare: &Path, branch: &str, file: &str, content: &str, create: bool) {
+    let work = std::env::temp_dir().join(format!("github-loco-branch-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(&work).expect("worktree should be creatable");
+
+    git(
+        &[
+            "clone",
+            "-q",
+            bare.to_str().unwrap(),
+            work.to_str().unwrap(),
+        ],
+        Path::new("."),
+    );
+    git(&["config", "user.email", "test@example.com"], &work);
+    git(&["config", "user.name", "Test User"], &work);
+    if create {
+        git(&["checkout", "-q", "-b", branch], &work);
+    } else {
+        git(&["checkout", "-q", branch], &work);
+    }
+    std::fs::write(work.join(file), content).expect("file should be writable");
+    git(&["add", "."], &work);
+    git(&["commit", "-q", "-m", &format!("update {file}")], &work);
+    git(&["push", "-q", "origin", branch], &work);
+
+    let _ = std::fs::remove_dir_all(&work);
+}
+
+/// Creates a new branch with one new file.
+pub fn seed_feature_branch(bare: &Path, branch: &str, file: &str, content: &str) {
+    seed_branch_commit(bare, branch, file, content, true);
+}
+
 /// Pushes one commit (with a README) into a bare repository and makes `main`
 /// its default branch.
 pub fn seed_commit(bare: &Path) {

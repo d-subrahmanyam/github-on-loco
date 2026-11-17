@@ -12,5 +12,7 @@ pub mod issue_labels;
 pub mod issues;
 pub mod labels;
 pub mod personal_access_tokens;
+pub mod pull_requests;
 pub mod repositories;
+pub mod review_comments;
 pub mod users;

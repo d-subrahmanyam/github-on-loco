@@ -3,10 +3,13 @@ import { all, call, put, takeEvery, takeLatest } from 'redux-saga/effects'
 import type { SagaIterator } from 'redux-saga'
 import { ApiClientError } from '../api/client'
 import { issuesApi } from '../api/issues'
+import { pullsApi } from '../api/pulls'
 import { repositoriesApi } from '../api/repositories'
 import { tokensApi } from '../api/tokens'
 import type { AddCommentParams } from '../bindings/AddCommentParams'
+import type { AddReviewCommentParams } from '../bindings/AddReviewCommentParams'
 import type { CreateIssueParams } from '../bindings/CreateIssueParams'
+import type { CreatePullRequestParams } from '../bindings/CreatePullRequestParams'
 import type { CreateLabelParams } from '../bindings/CreateLabelParams'
 import type { CreateRepoParams } from '../bindings/CreateRepoParams'
 import type { CreateTokenParams } from '../bindings/CreateTokenParams'
@@ -23,6 +26,12 @@ import {
   issueSucceeded,
   type IssueRequest,
 } from './issuesSlice'
+import {
+  pullFailed,
+  pullRequested,
+  pullSucceeded,
+  type PullRequest as PullRequestAction,
+} from './pullsSlice'
 import {
   tokenFailed,
   tokenRequested,
@@ -175,6 +184,97 @@ function* fetchIssue(action: PayloadAction<IssueRequest>): SagaIterator {
   }
 }
 
+function* fetchPull(action: PayloadAction<PullRequestAction>): SagaIterator {
+  const {
+    part,
+    key,
+    owner,
+    name,
+    number = 0,
+    state,
+    listState,
+    head,
+    base,
+    params,
+  } = action.payload
+  try {
+    let data: unknown
+    switch (part) {
+      case 'list':
+        data = yield call(pullsApi.list, owner, name, state)
+        break
+      case 'detail':
+        data = yield call(pullsApi.show, owner, name, number)
+        break
+      case 'compare':
+        data = yield call(pullsApi.compare, owner, name, head ?? '', base ?? '')
+        break
+      case 'comments':
+        data = yield call(pullsApi.comments, owner, name, number)
+        break
+      case 'create':
+        data = yield call(pullsApi.create, owner, name, params as CreatePullRequestParams)
+        break
+      case 'comment':
+        data = yield call(
+          pullsApi.comment,
+          owner,
+          name,
+          number,
+          params as AddReviewCommentParams,
+        )
+        break
+      case 'state':
+        data = yield call(
+          state === 'closed' ? pullsApi.close : pullsApi.reopen,
+          owner,
+          name,
+          number,
+        )
+        break
+      case 'merge':
+        data = yield call(pullsApi.merge, owner, name, number)
+        break
+    }
+    yield put(pullSucceeded({ part, key, data }))
+
+    if (part === 'create' || part === 'comment' || part === 'state' || part === 'merge') {
+      const scope = `${owner}/${name}`
+      yield put(
+        pullRequested({
+          part: 'list',
+          key: `list:${scope}:${listState ?? ''}`,
+          owner,
+          name,
+          state: listState,
+        }),
+      )
+      if (number > 0) {
+        yield put(
+          pullRequested({
+            part: 'detail',
+            key: `detail:${scope}:${number}`,
+            owner,
+            name,
+            number,
+          }),
+        )
+        yield put(
+          pullRequested({
+            part: 'comments',
+            key: `comments:${scope}:${number}`,
+            owner,
+            name,
+            number,
+          }),
+        )
+      }
+    }
+  } catch (err) {
+    yield put(pullFailed({ part, key, error: errorMessage(err) }))
+  }
+}
+
 function* fetchToken(action: PayloadAction<TokenRequest>): SagaIterator {
   const { part, key, params, id } = action.payload
   try {
@@ -208,6 +308,7 @@ export default function* rootSaga(): SagaIterator {
     // takeEvery (not takeLatest): several issue requests run in parallel and
     // stale responses are dropped by the key stored in issuesSlice.
     takeEvery(issueRequested.type, fetchIssue),
+    takeEvery(pullRequested.type, fetchPull),
     takeEvery(tokenRequested.type, fetchToken),
   ])
 }

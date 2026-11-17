@@ -36,8 +36,12 @@ pub enum Relation {
     Issues,
     #[sea_orm(has_many = "super::personal_access_tokens::Entity")]
     PersonalAccessTokens,
+    #[sea_orm(has_many = "super::pull_requests::Entity")]
+    PullRequests,
     #[sea_orm(has_many = "super::repositories::Entity")]
     Repositories,
+    #[sea_orm(has_many = "super::review_comments::Entity")]
+    ReviewComments,
 }
 
 impl Related<super::issue_comments::Entity> for Entity {
@@ -58,8 +62,20 @@ impl Related<super::personal_access_tokens::Entity> for Entity {
     }
 }
 
+impl Related<super::pull_requests::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::PullRequests.def()
+    }
+}
+
 impl Related<super::repositories::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Repositories.def()
+    }
+}
+
+impl Related<super::review_comments::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::ReviewComments.def()
     }
 }

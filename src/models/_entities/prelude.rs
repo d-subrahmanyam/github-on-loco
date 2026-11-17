@@ -7,5 +7,7 @@ pub use super::issue_labels::Entity as IssueLabels;
 pub use super::issues::Entity as Issues;
 pub use super::labels::Entity as Labels;
 pub use super::personal_access_tokens::Entity as PersonalAccessTokens;
+pub use super::pull_requests::Entity as PullRequests;
 pub use super::repositories::Entity as Repositories;
+pub use super::review_comments::Entity as ReviewComments;
 pub use super::users::Entity as Users;

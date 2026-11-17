@@ -15,3 +15,7 @@ mod issue_comments;
 mod labels;
 
 mod issue_labels;
+
+mod pull_requests;
+
+mod review_comments;

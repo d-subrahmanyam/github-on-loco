@@ -4,6 +4,7 @@ import {
   FaCopy,
   FaExclamationCircle,
   FaFolder,
+  FaGitAlt,
   FaHistory,
 } from 'react-icons/fa'
 import { useEffect, useState } from 'react'
@@ -91,6 +92,9 @@ export function RepoLayout() {
           </NavLink>
           <NavLink to="issues" className={tabClass}>
             <FaExclamationCircle /> Issues
+          </NavLink>
+          <NavLink to="pulls" className={tabClass}>
+            <FaGitAlt /> Pull requests
           </NavLink>
         </nav>
       </section>

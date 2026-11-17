@@ -4,3 +4,5 @@
 //! Never substitute `tokio::spawn`: it is not durable, retried or observable.
 
 pub mod downloader;
+
+pub mod merge_pull_request;

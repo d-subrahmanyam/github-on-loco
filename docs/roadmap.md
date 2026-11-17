@@ -36,12 +36,21 @@ Status legend: ✅ done · 🟡 partial · ⬜ planned.
       close/reopen and commenting; labels shown as coloured badges.
 - [ ] Markdown rendering in the frontend (plain text bodies for now).
 
-## Phase 3 — Pull requests ⬜
+## Phase 3 — Pull requests ✅
 
-- `pull_requests` model with per-repo numbering and `open|closed|merged` state.
-- Compare endpoint using `git diff base...head`.
-- Review comments, then a merge endpoint that performs the merge in a worker.
-- Branch protection rules after permissions exist.
+- [x] Generated `pull_requests` and `review_comments` models/migrations;
+      per-repo numbering allocated in a transaction and `unique(repository_id, number)`.
+- [x] `open|closed|merged` states; a merged PR cannot be reopened.
+- [x] Compare endpoint using a three-dot diff from the merge base: commits,
+      ahead/behind counts and per-file status/counts/patches.
+- [x] Review comments (general or anchored to a file and line).
+- [x] Merge endpoint that enqueues a background worker. The merge uses git
+      plumbing inside the bare repo (`merge-tree` → `commit-tree` → guarded
+      `update-ref`), so no working copy is needed and a concurrent push cannot
+      be overwritten. Conflicts leave the PR open.
+- [x] SPA pull request list, new-PR form, detail with compare/diff and comments,
+      close/reopen and merge controls.
+- Remaining: branch protection rules after permissions exist (Phase 4).
 
 ## Phase 4 — Collaboration and permissions ⬜
 

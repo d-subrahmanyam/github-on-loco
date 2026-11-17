@@ -26,6 +26,9 @@ end-to-end slice of that product.
   and raw files, exposed as a typed JSON API and rendered by the SPA.
 - **Issues and labels** — per-repository issue numbers, open/closed states,
   coloured labels, comments, and an SPA issue tracker.
+- **Pull requests** — per-repository numbering, a three-dot compare view
+  (commits + per-file patches), review comments, and merges performed by a
+  background worker with a git compare-and-swap guard.
 - **Caching** — branch heads and default-branch commits are cached in Postgres;
   git remains the source of truth and a push invalidates the cache.
 - **Frontend** — React + Vite SPA with Redux Toolkit slices and Redux Saga for
@@ -126,8 +129,6 @@ database on every boot.
 
 ## Not yet implemented
 
-Private-repository enforcement, pull requests, collaborators and
-organisations, stars/forks, notifications, search, and horizontal scaling of
-git storage. See [docs/roadmap.md](docs/roadmap.md) for the planned phases and
-[docs/git-transport.md](docs/git-transport.md) for the current security caveat
-around private repositories.
+Collaborators, roles and organisations, branch protection, stars/forks,
+notifications, search, and horizontal scaling of git storage. See
+[docs/roadmap.md](docs/roadmap.md) for the planned phases.

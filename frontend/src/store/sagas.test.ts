@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createAppStore } from './index'
 import { createRequested, listRequested } from './repositoriesSlice'
 import { issueRequested } from './issuesSlice'
+import { pullRequested } from './pullsSlice'
 import { tokenRequested } from './tokensSlice'
 import { jsonResponse } from '../test/helpers'
 
@@ -87,6 +88,74 @@ describe('issue sagas', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(store.getState().issues.issues).toEqual(newIssues)
+  })
+})
+
+describe('pull request sagas', () => {
+  const merged = {
+    id: 1,
+    number: 1,
+    title: 'Add feature',
+    body: null,
+    state: 'merged',
+    author: 'alice',
+    head_ref: 'feature',
+    head_sha: 'abc123',
+    base_ref: 'main',
+    comment_count: 0,
+    merged_at: '2026-01-01T00:00:00Z',
+    merged_commit_sha: 'def456',
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  }
+
+  it('merges a PR, then refreshes the list, detail and comments', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (init?.method === 'POST' && url.endsWith('/merge')) return jsonResponse(merged)
+      if (url.endsWith('/comments')) return jsonResponse([])
+      if (url.includes('/pulls/1')) return jsonResponse(merged)
+      return jsonResponse([merged])
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = createAppStore()
+    store.dispatch(pullRequested({ part: 'merge', key: 'merge', owner: 'a', name: 'r', number: 1 }))
+
+    await vi.waitFor(() => expect(store.getState().pulls.current?.state).toBe('merged'))
+    expect(store.getState().pulls.pulls).toEqual([merged])
+    expect(fetchMock.mock.calls.some((call) => call[1]?.method === 'POST')).toBe(true)
+  })
+
+  it('keeps a compare result separate from the detail response', async () => {
+    const comparison = {
+      base: 'base-sha',
+      head: 'abc123',
+      ahead_by: 1,
+      behind_by: 0,
+      commits: [],
+      files: [],
+    }
+    const fetchMock = vi.fn(async () => jsonResponse(comparison))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = createAppStore()
+    store.dispatch(
+      pullRequested({
+        part: 'compare',
+        key: 'compare',
+        owner: 'a',
+        name: 'r',
+        head: 'abc123',
+        base: 'main',
+      }),
+    )
+
+    await vi.waitFor(() => expect(store.getState().pulls.compare).toEqual(comparison))
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('head=abc123'),
+      expect.anything(),
+    )
   })
 })
 
