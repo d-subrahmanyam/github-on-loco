@@ -1,4 +1,4 @@
-import { FaGithub, FaSignOutAlt } from 'react-icons/fa'
+import { FaSignOutAlt } from 'react-icons/fa'
 import { useSyncExternalStore } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router'
 import { clearToken, getTokenSnapshot, subscribeToken } from './auth/token'
@@ -27,7 +27,11 @@ export function App() {
       <header className="border-b border-slate-800 bg-slate-900 text-slate-100">
         <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3">
           <Link to="/" className="flex items-center gap-2 text-lg font-semibold">
-            <FaGithub className="text-2xl" />
+            <img
+              src="/github-loco-logo.png"
+              alt="github-on-loco logo"
+              className="h-9 w-auto"
+            />
             <span>github-on-loco</span>
           </Link>
           <nav className="flex flex-1 items-center gap-5 text-sm">

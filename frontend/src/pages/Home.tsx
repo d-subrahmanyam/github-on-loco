@@ -1,4 +1,4 @@
-import { FaCodeBranch, FaGitAlt, FaGithub, FaSignInAlt, FaUserPlus } from 'react-icons/fa'
+import { FaArrowRight, FaCodeBranch, FaFolder, FaGitAlt, FaSignInAlt, FaUserPlus } from 'react-icons/fa'
 import { useSyncExternalStore } from 'react'
 import { Link } from 'react-router'
 import { getTokenSnapshot, subscribeToken } from '../auth/token'
@@ -12,7 +12,11 @@ export function Home() {
       <section className={`${card} overflow-hidden`}>
         <div className="border-b border-slate-200 bg-gradient-to-r from-slate-900 to-slate-700 px-8 py-10 text-white">
           <div className="flex items-center gap-3">
-            <FaGithub className="text-4xl" />
+            <img
+              src="/github-loco-logo.png"
+              alt="github-on-loco logo"
+              className="h-14 w-auto"
+            />
             <h1 className="text-3xl font-bold tracking-tight">github-on-loco</h1>
           </div>
           <p className="mt-3 max-w-2xl text-slate-300">
@@ -32,7 +36,7 @@ export function Home() {
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <FaGithub className="mt-1 text-2xl text-blue-600" />
+            <FaFolder className="mt-1 text-2xl text-blue-600" />
             <div>
               <h2 className="font-semibold">Repositories</h2>
               <p className="text-sm text-slate-600">
@@ -64,7 +68,7 @@ export function Home() {
         <div className="flex gap-3">
           {isAuthenticated ? (
             <Link to="/dashboard" className={primaryButton}>
-              <FaGithub /> Open dashboard
+              <FaArrowRight /> Open dashboard
             </Link>
           ) : (
             <>

@@ -1,3 +1,5 @@
+<img src="../assets/github-loco-logo.png" alt="github-on-loco logo" width="120" />
+
 # Frontend
 
 ## Batteries included

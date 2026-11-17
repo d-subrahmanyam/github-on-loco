@@ -1,3 +1,5 @@
+<img src="../assets/github-loco-logo.png" alt="github-on-loco logo" width="120" />
+
 # Documentation index
 
 This folder is the durable design record for the project. Chat decisions rot;

@@ -1,4 +1,4 @@
-import { FaEye, FaEyeSlash, FaGithub, FaSignInAlt } from 'react-icons/fa'
+import { FaEye, FaEyeSlash, FaSignInAlt } from 'react-icons/fa'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
@@ -40,7 +40,11 @@ export function Login() {
     <div className="mx-auto max-w-md">
       <div className={`${card} p-8`}>
         <div className="mb-6 flex items-center gap-3">
-          <FaGithub className="text-3xl text-slate-900" />
+          <img
+            src="/github-loco-logo.png"
+            alt="github-on-loco logo"
+            className="h-10 w-auto"
+          />
           <h1 className="text-2xl font-semibold">Log in</h1>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">

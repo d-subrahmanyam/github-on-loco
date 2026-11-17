@@ -1,4 +1,4 @@
-import { FaCode, FaCodeBranch, FaCopy, FaGithub, FaHistory } from 'react-icons/fa'
+import { FaCode, FaCodeBranch, FaCopy, FaFolder, FaHistory } from 'react-icons/fa'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useOutletContext, useParams } from 'react-router'
 import { browseRequested } from '../store/browseSlice'
@@ -48,7 +48,7 @@ export function RepoLayout() {
         <div className="flex flex-wrap items-start justify-between gap-4 p-6">
           <div>
             <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold">
-              <FaGithub className="text-slate-800" />
+              <FaFolder className="text-slate-800" />
               <span className="text-slate-500">{owner}</span>
               <span>/</span>
               <span>{name}</span>

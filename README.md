@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="assets/github-loco-logo.png" alt="github-on-loco logo" width="180" />
+</div>
+
 # github-on-loco
 
 A GitHub-like code hosting app built with [Loco](https://loco.rs) — "Rails for

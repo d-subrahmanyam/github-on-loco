@@ -1,4 +1,4 @@
-import { FaGithub, FaLink, FaLock, FaPlus, FaTimes, FaUnlock } from 'react-icons/fa'
+import { FaLink, FaLock, FaPlus, FaTimes, FaUnlock } from 'react-icons/fa'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
@@ -37,7 +37,11 @@ export function Repositories() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <FaGithub className="text-3xl text-slate-900" />
+        <img
+          src="/github-loco-logo.png"
+          alt="github-on-loco logo"
+          className="h-9 w-auto"
+        />
         <div>
           <h1 className="text-2xl font-semibold">Your repositories</h1>
           <p className="text-sm text-slate-600">Create a repo and start pushing code.</p>

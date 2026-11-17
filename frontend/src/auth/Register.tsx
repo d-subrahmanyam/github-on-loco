@@ -1,4 +1,4 @@
-import { FaEye, FaEyeSlash, FaGithub, FaUserPlus } from 'react-icons/fa'
+import { FaEye, FaEyeSlash, FaUserPlus } from 'react-icons/fa'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
@@ -42,7 +42,11 @@ export function Register() {
     return (
       <div className="mx-auto max-w-md">
         <div className={`${card} p-8 text-center`}>
-          <FaGithub className="mx-auto text-4xl text-slate-900" />
+          <img
+            src="/github-loco-logo.png"
+            alt="github-on-loco logo"
+            className="mx-auto h-12 w-auto"
+          />
           <h1 className="mt-4 text-2xl font-semibold">Check your email</h1>
           <p className="mt-2 text-sm text-slate-600">
             If that address is available, a verification link is on its way. You
@@ -60,7 +64,11 @@ export function Register() {
     <div className="mx-auto max-w-md">
       <div className={`${card} p-8`}>
         <div className="mb-6 flex items-center gap-3">
-          <FaGithub className="text-3xl text-slate-900" />
+          <img
+            src="/github-loco-logo.png"
+            alt="github-on-loco logo"
+            className="h-10 w-auto"
+          />
           <h1 className="text-2xl font-semibold">Sign up</h1>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
