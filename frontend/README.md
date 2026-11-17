@@ -6,7 +6,8 @@
 - [Vite](https://vitejs.dev/): A fast frontend build tool
 - [React](https://reactjs.org/): A JavaScript library for building user interfaces
 - [React Router](https://reactrouter.com/): Client-side routing
-- [TanStack Query](https://tanstack.com/query/latest): Data fetching and caching
+- [Redux Toolkit](https://redux-toolkit.js.org/) and [Redux Saga](https://redux-saga.js.org/): application state and API side effects (`src/store/`)
+- TypeScript bindings generated from the Rust DTOs by `ts-rs` (`src/bindings/`)
 
 # Development
 
