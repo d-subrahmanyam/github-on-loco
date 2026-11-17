@@ -3,6 +3,7 @@
 use axum::http::StatusCode;
 use github_loco::{
     app::App,
+    controllers::git_http::sync_pull_request_heads,
     dtos::pulls::{CompareResult, PullRequestResponse, ReviewCommentResponse},
 };
 use loco_rs::testing::prelude::*;
@@ -191,6 +192,117 @@ async fn private_pull_requests_need_auth_and_merge_requires_a_token() {
 
         let anonymous_merge = request.post("/api/repos/loco/hello/pulls/1/merge").await;
         assert_eq!(anonymous_merge.status_code(), StatusCode::UNAUTHORIZED);
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn pushing_to_the_head_branch_refreshes_the_pull_request() {
+    let root = support::TestRepoRoot::new();
+
+    request::<App, _, _>(|request, ctx| async move {
+        let (key, value) = setup_repo_with_feature(&request, &ctx, &root, false).await;
+
+        let created = request
+            .post("/api/repos/loco/hello/pulls")
+            .add_header(key.clone(), value.clone())
+            .json(&create_pr_body())
+            .await;
+        assert_eq!(created.status_code(), 200, "{}", created.text());
+        let original: PullRequestResponse = serde_json::from_str(&created.text()).unwrap();
+
+        // A new commit lands on the head branch after the PR was opened.
+        support::seed_branch_commit(
+            &root.bare_repo("loco", "hello"),
+            "feature",
+            "second.txt",
+            "second\n",
+            false,
+        );
+
+        // The in-process test server has no socket for the git CLI to push
+        // over HTTP, so invoke the same post-push bookkeeping directly.
+        sync_pull_request_heads(&ctx, "loco", "hello").await;
+
+        let detail = request.get("/api/repos/loco/hello/pulls/1").await;
+        let detail: PullRequestResponse = serde_json::from_str(&detail.text()).unwrap();
+        assert_ne!(detail.head_sha, original.head_sha);
+
+        // The SPA follows the refreshed SHA, so both new commits are visible.
+        let compare = request
+            .get(&format!(
+                "/api/repos/loco/hello/pulls/compare?head={}&base=main",
+                detail.head_sha
+            ))
+            .await;
+        assert_eq!(compare.status_code(), 200, "{}", compare.text());
+        let compare: CompareResult = serde_json::from_str(&compare.text()).unwrap();
+        assert_eq!(compare.ahead_by, 2);
+        assert_eq!(compare.commits.len(), 2);
+        assert_eq!(compare.files.len(), 2);
+
+        // And the merge uses the new head, not the stale one.
+        let merged = request
+            .post("/api/repos/loco/hello/pulls/1/merge")
+            .add_header(key, value)
+            .await;
+        assert_eq!(merged.status_code(), 200, "{}", merged.text());
+        let raw = request
+            .get("/api/repos/loco/hello/raw?ref=main&path=second.txt")
+            .await;
+        assert_eq!(raw.status_code(), 200, "{}", raw.text());
+        assert_eq!(raw.text(), "second\n");
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
+async fn merging_re_resolves_the_head_even_after_a_reopen() {
+    let root = support::TestRepoRoot::new();
+
+    request::<App, _, _>(|request, ctx| async move {
+        let (key, value) = setup_repo_with_feature(&request, &ctx, &root, false).await;
+        let created = request
+            .post("/api/repos/loco/hello/pulls")
+            .add_header(key.clone(), value.clone())
+            .json(&create_pr_body())
+            .await;
+        assert_eq!(created.status_code(), 200, "{}", created.text());
+
+        let closed = request
+            .post("/api/repos/loco/hello/pulls/1/close")
+            .add_header(key.clone(), value.clone())
+            .await;
+        assert_eq!(closed.status_code(), 200, "{}", closed.text());
+
+        // Push without going through the HTTP hook, then reopen: the stored
+        // head SHA is stale until the merge handler re-resolves it.
+        support::seed_branch_commit(
+            &root.bare_repo("loco", "hello"),
+            "feature",
+            "late.txt",
+            "late\n",
+            false,
+        );
+        let reopened = request
+            .post("/api/repos/loco/hello/pulls/1/reopen")
+            .add_header(key.clone(), value.clone())
+            .await;
+        assert_eq!(reopened.status_code(), 200, "{}", reopened.text());
+
+        let merged = request
+            .post("/api/repos/loco/hello/pulls/1/merge")
+            .add_header(key, value)
+            .await;
+        assert_eq!(merged.status_code(), 200, "{}", merged.text());
+
+        let raw = request
+            .get("/api/repos/loco/hello/raw?ref=main&path=late.txt")
+            .await;
+        assert_eq!(raw.status_code(), 200, "{}", raw.text());
+        assert_eq!(raw.text(), "late\n");
     })
     .await;
 }

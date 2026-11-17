@@ -74,9 +74,10 @@ being attached.
 | `pull_requests` | `repository_id`, `user_id` (author), `number`, `title`, `body`, `state` (`open`/`closed`/`merged`), `head_ref`, `head_sha`, `base_ref`, `merged_commit_sha`, `merged_at` — `unique(repository_id, number)` |
 | `review_comments` | `pull_request_id`, `user_id`, `body`, `path` (nullable), `line` (nullable) |
 
-The head is stored as both a ref and an immutable SHA resolved when the PR is
-opened: compare and merge both use the SHA, so a later force-push cannot change
-what was reviewed. `merge_commit_sha` records the resulting merge commit.
+The head is stored as a ref and the SHA it points at; compare and merge both use
+the SHA. The SHA is re-resolved and refreshed after each push to the head
+branch, so new commits (and force-pushes) are picked up without reopening the
+PR. `merge_commit_sha` records the resulting merge commit.
 
 ## Target model (GitHub-shaped)
 

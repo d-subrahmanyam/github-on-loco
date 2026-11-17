@@ -264,9 +264,23 @@ pub async fn merge(
     if !row.can_write(user.id) {
         return not_found();
     }
-    let pr = pull_requests::Model::find_by_number(&ctx.db, row.id, number).await?;
+    let mut pr = pull_requests::Model::find_by_number(&ctx.db, row.id, number).await?;
     if !pr.is_open() {
         return bad_request("only open pull requests can be merged");
+    }
+
+    // Defensive refresh: the push handler normally keeps head_sha current, but
+    // a PR may have been reopened after a push that bypassed it. Re-resolve
+    // here so the worker always merges the branch's actual tip.
+    let git = open_git(&ctx, &owner, &row)?;
+    if let Ok(sha) = git.resolve(&pr.head_ref).await {
+        if sha != pr.head_sha {
+            let active = pull_requests::ActiveModel {
+                id: Set(pr.id),
+                ..Default::default()
+            };
+            pr = active.set_head_sha(&ctx.db, &sha).await?;
+        }
     }
 
     // Reload after enqueue: in ForegroundBlocking mode (tests/dev) the worker

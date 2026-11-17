@@ -102,6 +102,35 @@ async fn pull_requests_are_numbered_per_repository_and_track_state() {
 
 #[tokio::test]
 #[serial]
+async fn a_new_head_sha_can_be_recorded_after_a_push() {
+    let (ctx, user_id, repo_id) = setup().await;
+    let db = &ctx.db;
+    let pr = pull_requests::ActiveModel::create_for_repository(
+        db,
+        repo_id,
+        user_id,
+        "Move the head",
+        None,
+        "feature",
+        "old-sha",
+        "main",
+    )
+    .await
+    .unwrap();
+
+    let updated = pull_requests::ActiveModel {
+        id: Set(pr.id),
+        ..Default::default()
+    }
+    .set_head_sha(db, "new-sha")
+    .await
+    .unwrap();
+    assert_eq!(updated.head_sha, "new-sha");
+    assert_eq!(updated.head_ref, "feature");
+}
+
+#[tokio::test]
+#[serial]
 async fn rejects_empty_titles_and_identical_branches() {
     let (ctx, user_id, repo_id) = setup().await;
     let db = &ctx.db;

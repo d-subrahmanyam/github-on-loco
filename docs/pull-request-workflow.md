@@ -99,15 +99,14 @@ final — it cannot be reopened or closed afterwards.
 - **Only the repository owner can open or merge PRs.** There are no
   collaborators, roles or forks yet ([roadmap](roadmap.md), Phase 4), so both
   branches must live in the same repository.
-- **The head is pinned to the SHA recorded when the PR was opened.** This keeps
-  the reviewed diff from changing under you if the branch is force-pushed, but
-  it also means pushing a fix to the head branch does not update an existing
-  PR. If you need to change the submitted commits, close the PR and open a new
-  one after pushing.
+- **The head follows the branch.** The recorded head SHA is refreshed after
+  every push, so pushing another commit (or force-pushing) to your branch
+  updates the existing PR's compare view and merge target. Reload the PR page
+  to see the new commit.
 - **Merge conflicts leave the PR open.** The worker reports the conflict and no
-  refs are changed. With the pinned head SHA above, the recovery is to resolve
-  the conflict locally, push, then close and reopen the PR so it captures the
-  new head commit.
+  refs are changed. To recover, merge the base branch into your head branch,
+  resolve the conflicts locally, and push again — the PR picks up the new head
+  and you can retry the merge.
 - In a production deployment the queue runs in `BackgroundQueue` mode, so a
   merge is asynchronous: the PR stays `open` until the worker finishes. The SPA
   refreshes the PR after enqueueing; reload the page to see the final state.

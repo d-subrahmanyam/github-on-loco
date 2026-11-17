@@ -1,8 +1,9 @@
 //! Pull request domain model: per-repository numbering, state and merge info.
 //!
 //! A PR is opened against a *base* branch in the same repository. The head is
-//! stored as both a ref (for display) and an immutable SHA (what actually gets
-//! merged), so a later force-push cannot silently change the reviewed diff.
+//! stored as a ref (for display) and the SHA it points at (what gets compared
+//! and merged). The SHA is refreshed after each push to the head branch, so a
+//! new commit — including a force-push — is picked up without reopening the PR.
 
 pub use super::_entities::pull_requests::Column;
 pub use super::_entities::pull_requests::{ActiveModel, Entity, Model};
@@ -143,6 +144,16 @@ impl ActiveModel {
     /// Returns a database error if the update fails.
     pub async fn set_state(mut self, db: &DatabaseConnection, state: &str) -> Result<Model> {
         self.state = Set(state.to_owned());
+        self.update(db).await.map_err(Into::into)
+    }
+
+    /// Records a new tip for the head branch. Called after a push so the PR's
+    /// compare view and eventual merge follow the branch's current commits.
+    ///
+    /// # Errors
+    /// Returns a database error if the update fails.
+    pub async fn set_head_sha(mut self, db: &DatabaseConnection, sha: &str) -> Result<Model> {
+        self.head_sha = Set(sha.to_owned());
         self.update(db).await.map_err(Into::into)
     }
 

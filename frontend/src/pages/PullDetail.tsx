@@ -41,8 +41,8 @@ export function PullDetail() {
     dispatch(pullRequested({ part: 'comments', key: keys.comments, owner, name, number: prNumber }))
   }, [dispatch, owner, name, scope, prNumber])
 
-  // Compare is pinned to the SHA recorded when the PR was opened, so a later
-  // force-push to the head branch cannot change what the reviewer approved.
+  // Compare follows the head SHA stored on the PR, which the git push handler
+  // refreshes whenever the head branch moves.
   useEffect(() => {
     if (!current) return
     dispatch(

@@ -16,8 +16,8 @@ use serde::Deserialize;
 use std::process::Stdio;
 use tokio::{io::AsyncWriteExt, process::Command};
 
-use crate::data::settings::AppSettings;
-use crate::models::{personal_access_tokens, repositories as repo_model, users};
+use crate::data::{git::GitRepo, settings::AppSettings};
+use crate::models::{personal_access_tokens, pull_requests, repositories as repo_model, users};
 
 fn ensure_git_repo_path(repo: &str) -> Result<()> {
     if !repo.ends_with(".git") {
@@ -264,6 +264,51 @@ async fn invalidate_repo_cache(ctx: &AppContext, owner: &str, repo: &str) {
     }
 }
 
+/// Refreshes the recorded head SHA of open PRs after a push.
+///
+/// Git stays authoritative: we re-resolve each PR's head ref rather than
+/// parsing the receive-pack payload. A push that did not move a ref is a no-op.
+/// Failures are logged and swallowed — a PR bookkeeping issue must never turn
+/// an otherwise successful push into an error. Public so request tests can
+/// exercise the same post-push bookkeeping against a local bare repository.
+pub async fn sync_pull_request_heads(ctx: &AppContext, owner: &str, repo: &str) {
+    let bare = repo.strip_suffix(".git").unwrap_or(repo);
+    let Ok(row) = repo_model::Model::find_by_owner_and_name(&ctx.db, owner, bare).await else {
+        return;
+    };
+    let Ok(prs) =
+        pull_requests::Model::find_by_repository(&ctx.db, row.id, Some(pull_requests::STATE_OPEN))
+            .await
+    else {
+        return;
+    };
+    if prs.is_empty() {
+        return;
+    }
+
+    let Ok(settings) = AppSettings::from_context(ctx) else {
+        return;
+    };
+    let Ok(git) = GitRepo::open(&settings.repo_base_dir, owner, bare) else {
+        return;
+    };
+    for pr in prs {
+        let Ok(sha) = git.resolve(&pr.head_ref).await else {
+            continue;
+        };
+        if sha == pr.head_sha {
+            continue;
+        }
+        let active = pull_requests::ActiveModel {
+            id: Set(pr.id),
+            ..Default::default()
+        };
+        if let Err(err) = active.set_head_sha(&ctx.db, &sha).await {
+            tracing::warn!(pull_request_id = pr.id, %err, "failed to refresh PR head SHA");
+        }
+    }
+}
+
 #[debug_handler]
 async fn receive_pack(
     Path((owner, repo)): Path<(String, String)>,
@@ -292,6 +337,7 @@ async fn receive_pack(
     .await?;
 
     invalidate_repo_cache(&ctx, &owner, &repo).await;
+    sync_pull_request_heads(&ctx, &owner, &repo).await;
     Ok(response)
 }
 
