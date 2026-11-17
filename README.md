@@ -49,6 +49,7 @@ in [`docs/`](docs/README.md):
 | [data-model.md](docs/data-model.md) | Current tables and the target GitHub schema |
 | [design-practices.md](docs/design-practices.md) | Conventions and review checklist |
 | [git-transport.md](docs/git-transport.md) | smart-HTTP details and authentication |
+| [pull-request-workflow.md](docs/pull-request-workflow.md) | User guide: clone, branch, push, open a PR, review and merge |
 | [roadmap.md](docs/roadmap.md) | Phases and what's left |
 | [testing.md](docs/testing.md) | Test layers and how to run them |
 

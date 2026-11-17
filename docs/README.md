@@ -11,6 +11,7 @@ these files are the contract.
 | [data-model.md](data-model.md) | What is in Postgres now and what the GitHub-shaped model looks like next |
 | [design-practices.md](design-practices.md) | The conventions every change must follow, plus a review checklist |
 | [git-transport.md](git-transport.md) | How clone/fetch/push work, and how authentication is handled |
+| [pull-request-workflow.md](pull-request-workflow.md) | Step-by-step guide for users: token, clone, branch, push, open a PR, review and merge |
 | [roadmap.md](roadmap.md) | Phased plan from starter to a useful GitHub-like product, with status |
 | [testing.md](testing.md) | Test layers, how to run them, and what is covered today |
 
@@ -28,9 +29,16 @@ product:
 - read-only code browsing — branches, commits, tree, raw files
   (`data/git.rs`, `controllers/git_browse.rs`), with a read-through Postgres cache
   for branch heads and default-branch commits;
+- issues and labels with per-repository numbering (`models/issues.rs`,
+  `controllers/issues.rs`);
+- pull requests with a three-dot compare view, review comments and a background
+  merge worker (`models/pull_requests.rs`, `data/git.rs`,
+  `workers/merge_pull_request.rs`) — see
+  [pull-request-workflow.md](pull-request-workflow.md) for the user guide;
 - a React SPA (`frontend/`) with login/register, a repository dashboard, code
-  browser, commit history/detail and branch list. Client state and all API side
-  effects are handled by **Redux Toolkit + Redux Saga** (`frontend/src/store/`).
+  browser, commit history/detail, branch list, issue tracker and pull request
+  pages. Client state and all API side effects are handled by **Redux Toolkit +
+  Redux Saga** (`frontend/src/store/`).
 
 ## Run it
 
