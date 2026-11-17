@@ -119,6 +119,6 @@ storage — that is a Phase 5/6 concern, documented in [roadmap.md](roadmap.md).
 | Git auth | PAT (with password fallback in dev) | JWT cannot travel in a git remote; password-in-remote is bad practice |
 | Public handle | new `username` column | `name` is display text and was not unique |
 | Repo create atomicity | roll back the DB row on git failure | Keeps metadata and disk in step without a distributed transaction |
-| Private repo browsing | **not enforced yet** | Read endpoints were generated public; enforcement lands with permissions (Phase 4) |
+| Private repo browsing | enforced via `can_read` | One rule shared by REST browsing, git transport and issues; 404 avoids leaking existence |
 | Browse cache | read-through, invalidated on push | Avoids spawning git for every list request without letting SQL become authoritative |
 | Frontend state | Redux Toolkit + Redux Saga | Explicit, testable side-effect flow for API calls; replaces React Query for repository data |

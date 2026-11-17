@@ -158,6 +158,26 @@ impl Entity {
             .await
             .map_err(Into::into)
     }
+
+    /// Revokes a token, but only for the user who issued it.
+    ///
+    /// # Errors
+    /// Returns 404 if the token does not exist or belongs to someone else.
+    pub async fn revoke(db: &DatabaseConnection, id: i64, user_id: i64) -> Result<()> {
+        let token = Entity::find_by_id(id).one(db).await?;
+        match token {
+            Some(token) if token.user_id == user_id => {
+                ActiveModel {
+                    id: Set(id),
+                    ..Default::default()
+                }
+                .delete(db)
+                .await?;
+                Ok(())
+            }
+            _ => not_found(),
+        }
+    }
 }
 
 #[async_trait::async_trait]

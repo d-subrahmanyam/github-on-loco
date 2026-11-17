@@ -87,6 +87,46 @@ async fn can_browse_branches_commits_tree_and_blobs() {
 
 #[tokio::test]
 #[serial]
+async fn private_repositories_are_hidden_from_anonymous_readers() {
+    let _root = support::TestRepoRoot::new();
+
+    request::<App, _, _>(|request, ctx| async move {
+        let logged = prepare_data::init_user_login(&request, &ctx).await;
+        let (key, value) = prepare_data::auth_header(&logged.token);
+        let owner = logged.user.owner_handle().to_owned();
+
+        let created = request
+            .post("/api/repositories")
+            .add_header(key.clone(), value.clone())
+            .json(&json!({ "name": "secret", "is_private": true }))
+            .await;
+        assert_eq!(created.status_code(), 200, "{}", created.text());
+
+        for path in [
+            format!("/api/repos/{owner}/secret"),
+            format!("/api/repos/{owner}/secret/branches"),
+            format!("/api/repos/{owner}/secret/commits"),
+        ] {
+            let anonymous = request.get(&path).await;
+            assert_eq!(anonymous.status_code(), 404, "anonymous read of {path}");
+
+            let allowed = request
+                .get(&path)
+                .add_header(key.clone(), value.clone())
+                .await;
+            assert_eq!(
+                allowed.status_code(),
+                200,
+                "owner read of {path}: {}",
+                allowed.text()
+            );
+        }
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
 async fn rejects_unsafe_revision_names() {
     let root = support::TestRepoRoot::new();
 

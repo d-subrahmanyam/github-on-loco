@@ -186,7 +186,10 @@ async fn info_refs(
     let settings = AppSettings::from_context(&ctx)?;
     ensure_git_repo_path(&repo)?;
 
-    let remote_user = if matches!(query.service.as_deref(), Some("git-receive-pack")) {
+    // Pushes always need auth; private repositories also require it for reads.
+    let needs_auth = matches!(query.service.as_deref(), Some("git-receive-pack"))
+        || repo_is_private(&ctx, &owner, &repo).await;
+    let remote_user = if needs_auth {
         let Some(login) = verified_owner_login(&ctx, &headers, &owner).await else {
             return unauthorized_basic();
         };
@@ -217,6 +220,15 @@ async fn upload_pack(
     let settings = AppSettings::from_context(&ctx)?;
     ensure_git_repo_path(&repo)?;
 
+    let remote_user = if repo_is_private(&ctx, &owner, &repo).await {
+        let Some(login) = verified_owner_login(&ctx, &headers, &owner).await else {
+            return unauthorized_basic();
+        };
+        Some(login)
+    } else {
+        None
+    };
+
     run_git_http_backend(
         "POST",
         &settings.repo_base_dir,
@@ -226,9 +238,18 @@ async fn upload_pack(
             .get(header::CONTENT_TYPE)
             .and_then(|v| v.to_str().ok()),
         body,
-        None,
+        remote_user.as_deref(),
     )
     .await
+}
+
+/// Whether a repository is private. An unknown repository fails closed so its
+/// existence is not leaked through an unauthenticated response.
+async fn repo_is_private(ctx: &AppContext, owner: &str, repo: &str) -> bool {
+    let bare = repo.strip_suffix(".git").unwrap_or(repo);
+    repo_model::Model::find_by_owner_and_name(&ctx.db, owner, bare)
+        .await
+        .map_or(true, |row| row.is_private())
 }
 
 /// Best-effort invalidation of the browse cache after a successful push.

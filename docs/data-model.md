@@ -54,6 +54,19 @@ Git is still authoritative. These rows are refilled on a cache miss and cleared
 on a successful push. `commits` holds only the default branch's recent history;
 explicit `?ref=` requests bypass it.
 
+### `issues`, `issue_comments`, `labels`, `issue_labels` (Phase 2)
+
+| Table | Columns |
+|---|---|
+| `issues` | `repository_id`, `user_id` (author), `number`, `title`, `body`, `state` (`open`/`closed`) — `unique(repository_id, number)` |
+| `issue_comments` | `issue_id`, `user_id`, `body` |
+| `labels` | `repository_id`, `name`, `color` (6-digit hex) |
+| `issue_labels` | `issue_id`, `label_id` (join table) |
+
+Issue numbers are allocated as `MAX(number) + 1` inside the same transaction as
+the insert. Labels are validated to belong to the issue's repository before
+being attached.
+
 ## Target model (GitHub-shaped)
 
 These tables are *planned*, not implemented. Add them with
@@ -66,9 +79,6 @@ personal_access_tokens (existing)
 
 collaborators          repository_id, user_id, role(admin|write|read)   [unique pair]
 
-issues                 repository_id, number, author_id, title, body, state, timestamps
-issue_comments         issue_id, author_id, body, timestamps
-labels / issue_labels  repository_id, name, color  /  join table
 pull_requests          repository_id, number, author_id, head_ref, head_sha,
                        base_ref, title, body, state(open|closed|merged), merged_at
 pr_reviews, review_comments

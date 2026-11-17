@@ -136,6 +136,11 @@ impl GitRepo {
         if !is_safe_ref(reference) {
             return bad_request("invalid revision");
         }
+        // A freshly created bare repository has no commits yet; that is an
+        // empty history, not an error.
+        if self.git(&["rev-parse", "--verify", "HEAD"]).await.is_err() {
+            return Ok(Vec::new());
+        }
         let limit = limit.clamp(1, 100).to_string();
         let out = self
             .git(&[
@@ -199,6 +204,20 @@ impl GitRepo {
         } else {
             format!("{reference}:{path}")
         };
+        // An empty repository has no tree to list.
+        if self.git(&["rev-parse", "--verify", "HEAD"]).await.is_err() {
+            return Ok(Vec::new());
+        }
+
+        // Clicking a file in the SPA also asks for its "tree". A blob has no
+        // children, so return an empty list instead of a 500 from git.
+        if let Ok(kind) = self.git(&["cat-file", "-t", &spec]).await {
+            let kind = String::from_utf8_lossy(&kind).trim().to_owned();
+            if kind != "tree" {
+                return Ok(Vec::new());
+            }
+        }
+
         let out = self.git(&["ls-tree", "--long", &spec]).await?;
 
         Ok(String::from_utf8_lossy(&out)

@@ -2,8 +2,14 @@ import type { PayloadAction } from '@reduxjs/toolkit'
 import { all, call, put, takeEvery, takeLatest } from 'redux-saga/effects'
 import type { SagaIterator } from 'redux-saga'
 import { ApiClientError } from '../api/client'
+import { issuesApi } from '../api/issues'
 import { repositoriesApi } from '../api/repositories'
+import { tokensApi } from '../api/tokens'
+import type { AddCommentParams } from '../bindings/AddCommentParams'
+import type { CreateIssueParams } from '../bindings/CreateIssueParams'
+import type { CreateLabelParams } from '../bindings/CreateLabelParams'
 import type { CreateRepoParams } from '../bindings/CreateRepoParams'
+import type { CreateTokenParams } from '../bindings/CreateTokenParams'
 import type { RepoResponse } from '../bindings/RepoResponse'
 import {
   browseFailed,
@@ -11,6 +17,18 @@ import {
   browseSucceeded,
   type BrowseRequest,
 } from './browseSlice'
+import {
+  issueFailed,
+  issueRequested,
+  issueSucceeded,
+  type IssueRequest,
+} from './issuesSlice'
+import {
+  tokenFailed,
+  tokenRequested,
+  tokenSucceeded,
+  type TokenRequest,
+} from './tokensSlice'
 import {
   createFailed,
   createRequested,
@@ -76,11 +94,120 @@ function* fetchBrowse(action: PayloadAction<BrowseRequest>): SagaIterator {
   }
 }
 
-/** Root saga: all API side effects for repository state live here. */
+function* fetchIssue(action: PayloadAction<IssueRequest>): SagaIterator {
+  const { part, key, owner, name, number = 0, state, listState, params } = action.payload
+  try {
+    let data: unknown
+    switch (part) {
+      case 'list':
+        data = yield call(issuesApi.list, owner, name, state)
+        break
+      case 'detail':
+        data = yield call(issuesApi.show, owner, name, number)
+        break
+      case 'comments':
+        data = yield call(issuesApi.comments, owner, name, number)
+        break
+      case 'labels':
+        data = yield call(issuesApi.labels, owner, name)
+        break
+      case 'create':
+        data = yield call(issuesApi.create, owner, name, params as CreateIssueParams)
+        break
+      case 'comment':
+        data = yield call(
+          issuesApi.comment,
+          owner,
+          name,
+          number,
+          params as AddCommentParams,
+        )
+        break
+      case 'state':
+        data = yield call(
+          state === 'closed' ? issuesApi.close : issuesApi.reopen,
+          owner,
+          name,
+          number,
+        )
+        break
+      case 'createLabel':
+        data = yield call(issuesApi.createLabel, owner, name, params as CreateLabelParams)
+        break
+    }
+    yield put(issueSucceeded({ part, key, data }))
+
+    // Mutations refresh the views that depend on them.
+    if (part === 'create' || part === 'comment' || part === 'state' || part === 'createLabel') {
+      const scope = `${owner}/${name}`
+      yield put(
+        issueRequested({
+          part: 'list',
+          key: `list:${scope}:${listState ?? ''}`,
+          owner,
+          name,
+          state: listState,
+        }),
+      )
+      if (number > 0) {
+        yield put(
+          issueRequested({
+            part: 'detail',
+            key: `detail:${scope}:${number}`,
+            owner,
+            name,
+            number,
+          }),
+        )
+        yield put(
+          issueRequested({
+            part: 'comments',
+            key: `comments:${scope}:${number}`,
+            owner,
+            name,
+            number,
+          }),
+        )
+      }
+    }
+  } catch (err) {
+    yield put(issueFailed({ part, key, error: errorMessage(err) }))
+  }
+}
+
+function* fetchToken(action: PayloadAction<TokenRequest>): SagaIterator {
+  const { part, key, params, id } = action.payload
+  try {
+    let data: unknown
+    switch (part) {
+      case 'list':
+        data = yield call(tokensApi.list)
+        break
+      case 'create':
+        data = yield call(tokensApi.create, params as CreateTokenParams)
+        break
+      case 'revoke':
+        data = yield call(tokensApi.revoke, id ?? 0)
+        break
+    }
+    yield put(tokenSucceeded({ part, key, data }))
+    if (part !== 'list') {
+      yield put(tokenRequested({ part: 'list', key: 'list:tokens' }))
+    }
+  } catch (err) {
+    yield put(tokenFailed({ part, key, error: errorMessage(err) }))
+  }
+}
+
+/** Root saga: all API side effects live here. */
 export default function* rootSaga(): SagaIterator {
   yield all([
     takeLatest(listRequested.type, listRepositories),
     takeEvery(createRequested.type, createRepository),
     takeLatest(browseRequested.type, fetchBrowse),
+    // takeEvery (not takeLatest): several issue requests run in parallel and
+    // stale responses are dropped by the key stored in issuesSlice.
+    takeEvery(issueRequested.type, fetchIssue),
+    takeEvery(tokenRequested.type, fetchToken),
   ])
 }

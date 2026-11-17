@@ -7,3 +7,11 @@ mod personal_access_tokens;
 mod branches;
 
 mod commits;
+
+mod issues;
+
+mod issue_comments;
+
+mod labels;
+
+mod issue_labels;

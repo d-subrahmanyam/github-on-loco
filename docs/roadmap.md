@@ -26,12 +26,15 @@ Status legend: ✅ done · 🟡 partial · ⬜ planned.
 - [x] Read-through branch/commit cache in Postgres, invalidated on push; only
   the default branch's history is cached.
 
-## Phase 2 — Issues and labels ⬜
+## Phase 2 — Issues and labels ✅
 
-- `cargo loco generate model issues ...`, `issue_comments`, `labels`, `issue_labels`.
-- Model state transitions: `open`, `close`, `reopen`; per-repo numbering.
-- Endpoints and SPA: issue list, new issue, detail, comments, label filters.
-- Markdown rendering in the frontend.
+- [x] Generated `issues`, `issue_comments`, `labels` and `issue_labels` models/migrations.
+- [x] Per-repository issue numbering allocated inside a transaction; labels
+      scoped to a repository and validated when attached.
+- [x] `open`/`closed` state transitions, comments, and label CRUD endpoints.
+- [x] SPA: issue list with state filter, new-issue form, issue detail with
+      close/reopen and commenting; labels shown as coloured badges.
+- [ ] Markdown rendering in the frontend (plain text bodies for now).
 
 ## Phase 3 — Pull requests ⬜
 
@@ -44,7 +47,10 @@ Status legend: ✅ done · 🟡 partial · ⬜ planned.
 
 - `collaborators`, organizations, teams, roles.
 - A single `can(user, repo, action)` model method used by REST *and* git auth.
-- Enforce private repositories on browse and clone/push paths.
+- [x] Owner-only private repo enforcement on browse, git transport and issues
+      (pulled forward because it was a security gap); token issue/revoke API
+      and SPA page.
+- Remaining: collaborators/roles extend `can_read` / `can_write`.
 - Stars, forks, watches, activity events from `events`.
 
 ## Phase 5 — Polish and scale ⬜

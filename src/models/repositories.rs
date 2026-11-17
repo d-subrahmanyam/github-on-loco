@@ -93,6 +93,20 @@ impl Model {
         self.user_id == user_id
     }
 
+    /// Single read-authorization rule used by REST and git transport alike.
+    /// Public repos are readable by anyone; private ones only by the owner.
+    /// Collaborators will be added to this method in Phase 4.
+    #[must_use]
+    pub fn can_read(&self, viewer_id: Option<i64>) -> bool {
+        !self.is_private() || viewer_id == Some(self.user_id)
+    }
+
+    /// Write-authorization rule. Only the owner may mutate a repository.
+    #[must_use]
+    pub fn can_write(&self, user_id: i64) -> bool {
+        self.user_id == user_id
+    }
+
     /// The repository name as stored, or an error if a legacy row has none.
     ///
     /// # Errors

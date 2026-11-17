@@ -7,6 +7,10 @@
 pub mod _entities;
 pub mod branches;
 pub mod commits;
+pub mod issue_comments;
+pub mod issue_labels;
+pub mod issues;
+pub mod labels;
 pub mod personal_access_tokens;
 pub mod repositories;
 pub mod users;

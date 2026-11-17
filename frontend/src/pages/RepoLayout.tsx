@@ -1,4 +1,11 @@
-import { FaCode, FaCodeBranch, FaCopy, FaFolder, FaHistory } from 'react-icons/fa'
+import {
+  FaCode,
+  FaCodeBranch,
+  FaCopy,
+  FaExclamationCircle,
+  FaFolder,
+  FaHistory,
+} from 'react-icons/fa'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useOutletContext, useParams } from 'react-router'
 import { browseRequested } from '../store/browseSlice'
@@ -81,6 +88,9 @@ export function RepoLayout() {
           </NavLink>
           <NavLink to="branches" className={tabClass}>
             <FaCodeBranch /> Branches
+          </NavLink>
+          <NavLink to="issues" className={tabClass}>
+            <FaExclamationCircle /> Issues
           </NavLink>
         </nav>
       </section>

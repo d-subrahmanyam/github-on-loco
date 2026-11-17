@@ -14,6 +14,10 @@ mod m20261117_122006_add_username_to_users;
 mod m20261117_151206_personal_access_tokens;
 mod m20261117_154653_branches;
 mod m20261117_154742_commits;
+mod m20261117_173120_issues;
+mod m20261117_173244_issue_comments;
+mod m20261117_173330_labels;
+mod m20261117_173417_issue_labels;
 pub struct Migrator;
 
 #[async_trait::async_trait]
@@ -26,6 +30,10 @@ impl MigratorTrait for Migrator {
             Box::new(m20261117_151206_personal_access_tokens::Migration),
             Box::new(m20261117_154653_branches::Migration),
             Box::new(m20261117_154742_commits::Migration),
+            Box::new(m20261117_173120_issues::Migration),
+            Box::new(m20261117_173244_issue_comments::Migration),
+            Box::new(m20261117_173330_labels::Migration),
+            Box::new(m20261117_173417_issue_labels::Migration),
             // inject-above (do not remove this comment)
         ]
     }

@@ -6,8 +6,8 @@
 
 A GitHub-like code hosting app built with [Loco](https://loco.rs) — "Rails for
 Rust". The goal is a self-hostable GitHub: users and repositories, real
-`git clone`/`push`, code browsing, and eventually issues, pull requests and
-collaboration.
+`git clone`/`push`, code browsing, issues and labels, and eventually pull
+requests and collaboration.
 
 This repository began as Loco's SaaS starter and now implements the first
 end-to-end slice of that product.
@@ -19,11 +19,13 @@ end-to-end slice of that product.
 - **Repositories** — create/list through the API or the SPA; each repo gets a
   bare git repository on disk under `REPO_BASE_DIR`.
 - **Git transport** — `git clone`, `fetch` and `push` over HTTP via
-  `git http-backend`. Pushes require Basic auth (account password in local
-  development; personal access tokens are modelled and supported by the
-  transport, but no token-management endpoint exists yet).
+  `git http-backend`. Pushes require Basic auth; issue and revoke personal
+  access tokens from the **Tokens** page in the SPA. Private repositories
+  require auth for reads too.
 - **Code browsing** — branches, commit history, commit detail, directory trees
   and raw files, exposed as a typed JSON API and rendered by the SPA.
+- **Issues and labels** — per-repository issue numbers, open/closed states,
+  coloured labels, comments, and an SPA issue tracker.
 - **Caching** — branch heads and default-branch commits are cached in Postgres;
   git remains the source of truth and a push invalidates the cache.
 - **Frontend** — React + Vite SPA with Redux Toolkit slices and Redux Saga for
@@ -94,19 +96,19 @@ Run `cargo loco routes` to see the live, complete route table.
 
 ## Pushing code
 
-Create a repository in the SPA, then clone it and push with your account
-credentials:
+Create a repository in the SPA, create a token on the **Tokens** page, then
+clone and push with the token as the Basic password:
 
 ```sh
 git clone http://localhost:5150/<username>/<repo>.git
 cd <repo>
-git remote set-url origin http://<email-or-username>:<password>@localhost:5150/<username>/<repo>.git
+git remote set-url origin http://<username>:<token>@localhost:5150/<username>/<repo>.git
 git push origin main
 ```
 
-Use a personal access token instead of the password wherever possible —
-putting an account password in a git remote is convenient only for local
-development.
+For private repositories, the same credentials are required to clone or fetch.
+The account password still works as a fallback for local development, but a
+token is the right choice for a remote.
 
 ## Checks
 
@@ -123,7 +125,7 @@ database on every boot.
 
 ## Not yet implemented
 
-Private-repository enforcement, issues, pull requests, collaborators and
+Private-repository enforcement, pull requests, collaborators and
 organisations, stars/forks, notifications, search, and horizontal scaling of
 git storage. See [docs/roadmap.md](docs/roadmap.md) for the planned phases and
 [docs/git-transport.md](docs/git-transport.md) for the current security caveat

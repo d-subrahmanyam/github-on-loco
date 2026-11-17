@@ -8,3 +8,7 @@ pub mod auth;
 pub mod git_browse;
 pub mod git_http;
 pub mod repositories;
+
+pub mod issues;
+
+pub mod tokens;

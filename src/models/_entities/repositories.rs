@@ -23,6 +23,10 @@ pub enum Relation {
     Branches,
     #[sea_orm(has_many = "super::commits::Entity")]
     Commits,
+    #[sea_orm(has_many = "super::issues::Entity")]
+    Issues,
+    #[sea_orm(has_many = "super::labels::Entity")]
+    Labels,
     #[sea_orm(
         belongs_to = "super::users::Entity",
         from = "Column::UserId",
@@ -42,6 +46,18 @@ impl Related<super::branches::Entity> for Entity {
 impl Related<super::commits::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Commits.def()
+    }
+}
+
+impl Related<super::issues::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Issues.def()
+    }
+}
+
+impl Related<super::labels::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Labels.def()
     }
 }
 

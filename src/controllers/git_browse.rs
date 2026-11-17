@@ -15,16 +15,33 @@ use serde::Deserialize;
 
 use crate::data::{git::GitRepo, settings::AppSettings};
 use crate::dtos::repositories::{Branch, Commit, CommitDetail, RepoResponse, TreeEntry};
-use crate::models::{branches, commits, repositories as repo_model};
+use crate::models::{branches, commits, repositories as repo_model, users};
 
-/// Loads the metadata row and opens the matching bare repository.
+/// Resolves an optional JWT to a user id. Anonymous requests are allowed.
+async fn viewer_id(ctx: &AppContext, viewer: Option<auth::JWT>) -> Result<Option<i64>> {
+    match viewer {
+        Some(jwt) => Ok(Some(
+            users::Model::find_by_pid(&ctx.db, &jwt.claims.pid)
+                .await?
+                .id,
+        )),
+        None => Ok(None),
+    }
+}
+
+/// Loads the metadata row and opens the bare repository, enforcing visibility.
 async fn open_repo(
     ctx: &AppContext,
     owner: &str,
     repo: &str,
+    viewer: Option<i64>,
 ) -> Result<(repo_model::Model, GitRepo)> {
     let settings = AppSettings::from_context(ctx)?;
     let row = repo_model::Model::find_by_owner_and_name(&ctx.db, owner, repo).await?;
+    // 404 rather than 401: do not reveal that a private repository exists.
+    if !row.can_read(viewer) {
+        return not_found();
+    }
     let git = GitRepo::open(&settings.repo_base_dir, owner, repo)?;
     Ok((row, git))
 }
@@ -42,8 +59,10 @@ async fn reference_or_default(git: &GitRepo, reference: Option<&str>) -> Result<
 pub async fn overview(
     Path((owner, repo)): Path<(String, String)>,
     State(ctx): State<AppContext>,
+    viewer: Option<auth::JWT>,
 ) -> Result<Response> {
-    let (row, _git) = open_repo(&ctx, &owner, &repo).await?;
+    let viewer = viewer_id(&ctx, viewer).await?;
+    let (row, _git) = open_repo(&ctx, &owner, &repo, viewer).await?;
     format::json(RepoResponse {
         id: row.id,
         owner: owner.clone(),
@@ -63,8 +82,10 @@ pub async fn overview(
 pub async fn branches(
     Path((owner, repo)): Path<(String, String)>,
     State(ctx): State<AppContext>,
+    viewer: Option<auth::JWT>,
 ) -> Result<Response> {
-    let (row, git) = open_repo(&ctx, &owner, &repo).await?;
+    let viewer = viewer_id(&ctx, viewer).await?;
+    let (row, git) = open_repo(&ctx, &owner, &repo, viewer).await?;
 
     // Git is authoritative; the table is only a read-through cache. A cache
     // error must never turn a browsing request into a 500.
@@ -105,8 +126,10 @@ pub async fn commits(
     Path((owner, repo)): Path<(String, String)>,
     State(ctx): State<AppContext>,
     Query(query): Query<CommitsQuery>,
+    viewer: Option<auth::JWT>,
 ) -> Result<Response> {
-    let (row, git) = open_repo(&ctx, &owner, &repo).await?;
+    let viewer = viewer_id(&ctx, viewer).await?;
+    let (row, git) = open_repo(&ctx, &owner, &repo, viewer).await?;
     let reference = reference_or_default(&git, query.reference.as_deref()).await?;
 
     // Only the default branch has a cache key in this table. Explicit refs
@@ -146,8 +169,10 @@ pub async fn commits(
 pub async fn commit(
     Path((owner, repo, sha)): Path<(String, String, String)>,
     State(ctx): State<AppContext>,
+    viewer: Option<auth::JWT>,
 ) -> Result<Response> {
-    let (_row, git) = open_repo(&ctx, &owner, &repo).await?;
+    let viewer = viewer_id(&ctx, viewer).await?;
+    let (_row, git) = open_repo(&ctx, &owner, &repo, viewer).await?;
     let detail: CommitDetail = git.commit(&sha).await?;
     format::json(detail)
 }
@@ -166,8 +191,10 @@ pub async fn tree(
     Path((owner, repo)): Path<(String, String)>,
     State(ctx): State<AppContext>,
     Query(query): Query<TreeQuery>,
+    viewer: Option<auth::JWT>,
 ) -> Result<Response> {
-    let (_row, git) = open_repo(&ctx, &owner, &repo).await?;
+    let viewer = viewer_id(&ctx, viewer).await?;
+    let (_row, git) = open_repo(&ctx, &owner, &repo, viewer).await?;
     let reference = reference_or_default(&git, query.reference.as_deref()).await?;
     let entries: Vec<TreeEntry> = git
         .tree(&reference, query.path.as_deref().unwrap_or(""))
@@ -198,8 +225,10 @@ pub async fn raw(
     Path((owner, repo)): Path<(String, String)>,
     State(ctx): State<AppContext>,
     Query(query): Query<TreeQuery>,
+    viewer: Option<auth::JWT>,
 ) -> Result<Response> {
-    let (_row, git) = open_repo(&ctx, &owner, &repo).await?;
+    let viewer = viewer_id(&ctx, viewer).await?;
+    let (_row, git) = open_repo(&ctx, &owner, &repo, viewer).await?;
     let reference = reference_or_default(&git, query.reference.as_deref()).await?;
     let path = query.path.as_deref().unwrap_or("");
     let bytes = git.blob(&reference, path).await?;

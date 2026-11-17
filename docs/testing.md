@@ -47,6 +47,9 @@ for obtaining a JWT and building the `Authorization` header.
   → commit detail → tree → raw blob) with a real commit pushed into a bare
   repo, cache warming assertions, and rejection of unsafe refs/paths.
 - **Cache**: replace/find/clear for both branch and commit caches.
+- **Issues**: per-repo numbering, label attachment/validation, state
+  transitions, comments and label CRUD; request tests cover the full issue
+  lifecycle including authentication failures for blank titles/bad labels.
 - **Frontend**: `pnpm build` type-checks the Redux Saga slices, sagas and pages.
 - **Tasks**: user create/delete.
 

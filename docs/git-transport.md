@@ -55,12 +55,22 @@ git remote set-url origin http://alice:<PAT>@localhost:5150/alice/hello.git
 git push origin main
 ```
 
+## Visibility
+
+Private repositories require authentication for **all** access:
+
+- browse REST endpoints call `repositories::Model::can_read(viewer_id)` and
+  answer 404 for anonymous or non-owner viewers;
+- `git http-backend` routes require Basic auth on both `info/refs` (any
+  service) and `git-upload-pack`; pushes were already authenticated;
+- issue and label endpoints use the same `can_read` rule, with owner-only
+  checks for state changes and label creation.
+
+This is the single authorization rule; collaborators (Phase 4) will extend it
+rather than add a second permission system.
+
 ## Known gaps
 
-- **Private repositories are not enforced.** The browse endpoints in
-  `git_browse.rs` and the read side of `git_http.rs` do not check visibility.
-  This is scheduled for Phase 4 together with permissions. Do not host
-  sensitive code with the current build.
 - The clone URL is built from `ctx.config.server.full_url()`; behind a proxy,
   configure `server.host`/port so advertised URLs are correct.
 - Repo creation is synchronous. Moving `git init --bare` into a worker is

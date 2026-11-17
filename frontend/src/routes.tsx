@@ -7,8 +7,11 @@ import { Branches } from './pages/Branches'
 import { CommitDetail } from './pages/CommitDetail'
 import { Commits } from './pages/Commits'
 import { Home } from './pages/Home'
+import { IssueDetail } from './pages/IssueDetail'
+import { IssueList } from './pages/IssueList'
 import { Repositories } from './pages/Repositories'
 import { RepoCode } from './pages/RepoCode'
+import { Tokens } from './pages/Tokens'
 import { RepoLayout } from './pages/RepoLayout'
 // scaffold:imports
 
@@ -25,6 +28,7 @@ export const router = createBrowserRouter([
         children: [
           // scaffold:routes
           { path: 'dashboard', element: <Repositories /> },
+          { path: 'tokens', element: <Tokens /> },
         ],
       },
       {
@@ -35,6 +39,8 @@ export const router = createBrowserRouter([
           { path: 'commits', element: <Commits /> },
           { path: 'commit/:sha', element: <CommitDetail /> },
           { path: 'branches', element: <Branches /> },
+          { path: 'issues', element: <IssueList /> },
+          { path: 'issues/:number', element: <IssueDetail /> },
         ],
       },
     ],

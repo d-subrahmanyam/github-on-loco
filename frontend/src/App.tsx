@@ -1,10 +1,12 @@
-import { FaSignOutAlt } from 'react-icons/fa'
+import { FaKey, FaSignOutAlt } from 'react-icons/fa'
 import { useSyncExternalStore } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router'
 import { clearToken, getTokenSnapshot, subscribeToken } from './auth/token'
 import { browseReset } from './store/browseSlice'
 import { useAppDispatch } from './store/hooks'
+import { issuesReset } from './store/issuesSlice'
 import { reset as resetRepositories } from './store/repositoriesSlice'
+import { tokensReset } from './store/tokensSlice'
 import { button } from './ui'
 
 export function App() {
@@ -19,6 +21,8 @@ export function App() {
     clearToken()
     dispatch(browseReset())
     dispatch(resetRepositories())
+    dispatch(issuesReset())
+    dispatch(tokensReset())
     navigate('/login', { replace: true })
   }
 
@@ -41,6 +45,11 @@ export function App() {
             {isAuthenticated && (
               <Link to="/dashboard" className="text-slate-300 hover:text-white">
                 Repositories
+              </Link>
+            )}
+            {isAuthenticated && (
+              <Link to="/tokens" className="inline-flex items-center gap-1 text-slate-300 hover:text-white">
+                <FaKey /> Tokens
               </Link>
             )}
           </nav>
