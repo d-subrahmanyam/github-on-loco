@@ -79,6 +79,18 @@ the SHA. The SHA is re-resolved and refreshed after each push to the head
 branch, so new commits (and force-pushes) are picked up without reopening the
 PR. `merge_commit_sha` records the resulting merge commit.
 
+### `collaborators` (Phase 4)
+
+| Column | Notes |
+|---|---|
+| `repository_id`, `user_id` | grant target — `unique(repository_id, user_id)` |
+| `role` | `read`, `write` or `admin`; the owner is implicit and not stored here |
+
+Permissions are answered by `repositories::Model::can(db, user_id, action)` with
+`RepoAction::{Read, Write, Admin}`: the owner has all actions, a public repo
+grants `Read` to anyone, and everyone else is checked against this row.
+`can_read`, `can_write` and `can_admin` are wrappers around that one rule.
+
 ## Target model (GitHub-shaped)
 
 These tables are *planned*, not implemented. Add them with
@@ -89,7 +101,7 @@ users                  (existing)
 repositories           (existing)   + default_branch, status, org_id?, star_count
 personal_access_tokens (existing)
 
-collaborators          repository_id, user_id, role(admin|write|read)   [unique pair]
+collaborators          (existing)
 
 pull_requests          (existing)   + merged_commit_sha
 review_comments        (existing)

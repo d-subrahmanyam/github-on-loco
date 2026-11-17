@@ -6,6 +6,7 @@
 
 pub mod _entities;
 pub mod branches;
+pub mod collaborators;
 pub mod commits;
 pub mod issue_comments;
 pub mod issue_labels;

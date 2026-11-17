@@ -5,6 +5,7 @@
 //! `git_browse` exposes read-only code browsing.
 
 pub mod auth;
+pub mod collaborators;
 pub mod git_browse;
 pub mod git_http;
 pub mod repositories;

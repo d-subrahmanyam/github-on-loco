@@ -39,7 +39,7 @@ async fn open_repo(
     let settings = AppSettings::from_context(ctx)?;
     let row = repo_model::Model::find_by_owner_and_name(&ctx.db, owner, repo).await?;
     // 404 rather than 401: do not reveal that a private repository exists.
-    if !row.can_read(viewer) {
+    if !row.can_read(&ctx.db, viewer).await? {
         return not_found();
     }
     let git = GitRepo::open(&settings.repo_base_dir, owner, repo)?;
@@ -63,6 +63,7 @@ pub async fn overview(
 ) -> Result<Response> {
     let viewer = viewer_id(&ctx, viewer).await?;
     let (row, _git) = open_repo(&ctx, &owner, &repo, viewer).await?;
+    let viewer_role = row.role_for(&ctx.db, viewer).await?;
     format::json(RepoResponse {
         id: row.id,
         owner: owner.clone(),
@@ -74,6 +75,7 @@ pub async fn overview(
             ctx.config.server.full_url(),
             row.clone_path(&owner)?
         ),
+        viewer_role,
     })
 }
 

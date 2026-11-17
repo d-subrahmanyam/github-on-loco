@@ -6,7 +6,7 @@ import { browseRequested } from '../store/browseSlice'
 import { pullRequested } from '../store/pullsSlice'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { card, input, label, primaryButton } from '../ui'
-import { useRepoParams } from './RepoLayout'
+import { canWriteRole, useRepoParams, useRepoRole } from './RepoLayout'
 
 /** Pull request list, state filter and new-PR form. */
 export function PullList() {
@@ -24,6 +24,7 @@ export function PullList() {
   const [pendingNavigate, setPendingNavigate] = useState(false)
 
   const scope = `${owner}/${name}`
+  const canWrite = canWriteRole(useRepoRole())
 
   useEffect(() => {
     dispatch(
@@ -154,6 +155,7 @@ export function PullList() {
         </ul>
       </section>
 
+      {canWrite && (
       <aside className="space-y-6">
         <form onSubmit={handleSubmit} className={`${card} h-fit space-y-4 p-5`}>
           <h2 className="flex items-center gap-2 text-lg font-semibold">
@@ -218,6 +220,7 @@ export function PullList() {
           )}
         </form>
       </aside>
+      )}
     </div>
   )
 }

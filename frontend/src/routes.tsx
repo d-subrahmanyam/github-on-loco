@@ -4,6 +4,7 @@ import { Login } from './auth/Login'
 import { Register } from './auth/Register'
 import { RequireAuth } from './auth/RequireAuth'
 import { Branches } from './pages/Branches'
+import { Collaborators } from './pages/Collaborators'
 import { CommitDetail } from './pages/CommitDetail'
 import { Commits } from './pages/Commits'
 import { Home } from './pages/Home'
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([
           { path: 'issues/:number', element: <IssueDetail /> },
           { path: 'pulls', element: <PullList /> },
           { path: 'pulls/:number', element: <PullDetail /> },
+          { path: 'collaborators', element: <Collaborators /> },
         ],
       },
     ],

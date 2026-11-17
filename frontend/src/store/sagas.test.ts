@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { collaboratorRequested } from './collaboratorsSlice'
 import { createAppStore } from './index'
 import { createRequested, listRequested } from './repositoriesSlice'
 import { issueRequested } from './issuesSlice'
@@ -15,7 +16,7 @@ describe('repository sagas', () => {
         name: 'hello',
         description: null,
         is_private: false,
-        clone_url: 'http://localhost:5150/alice/hello.git',
+        clone_url: 'http://localhost:5150/alice/hello.git', viewer_role: 'owner',
       },
     ]
     const fetchMock = vi.fn(async () => jsonResponse(repos))
@@ -38,7 +39,7 @@ describe('repository sagas', () => {
       name: 'new-repo',
       description: null,
       is_private: true,
-      clone_url: 'http://localhost:5150/alice/new-repo.git',
+      clone_url: 'http://localhost:5150/alice/new-repo.git', viewer_role: 'owner',
     }
     const posts: unknown[] = []
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
@@ -155,6 +156,34 @@ describe('pull request sagas', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('head=abc123'),
       expect.anything(),
+    )
+  })
+})
+
+describe('collaborator sagas', () => {
+  it('adds a collaborator and stores the returned grant', async () => {
+    const grant = { id: 1, user_id: 2, username: 'guest', role: 'write' }
+    const fetchMock = vi.fn(async () => jsonResponse(grant))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = createAppStore()
+    store.dispatch(
+      collaboratorRequested({
+        part: 'add',
+        key: 'add',
+        owner: 'a',
+        name: 'r',
+        username: 'guest',
+        role: 'write',
+      }),
+    )
+
+    await vi.waitFor(() =>
+      expect(store.getState().collaborators.collaborators).toEqual([grant]),
+    )
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/collaborators'),
+      expect.objectContaining({ method: 'POST' }),
     )
   })
 })

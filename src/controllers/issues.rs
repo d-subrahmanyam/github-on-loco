@@ -34,7 +34,7 @@ async fn find_repo(
     viewer: Option<i64>,
 ) -> Result<repositories::Model> {
     let row = repositories::Model::find_by_owner_and_name(&ctx.db, owner, repo).await?;
-    if !row.can_read(viewer) {
+    if !row.can_read(&ctx.db, viewer).await? {
         return not_found();
     }
     Ok(row)
@@ -149,7 +149,7 @@ async fn set_state(
 ) -> Result<Response> {
     let user = users::Model::find_by_pid(&ctx.db, &auth.claims.pid).await?;
     let row = find_repo(ctx, owner, repo, Some(user.id)).await?;
-    if !row.can_write(user.id) {
+    if !row.can_write(&ctx.db, user.id).await? {
         return not_found();
     }
     let issue = issues::Model::find_by_number(&ctx.db, row.id, number).await?;
@@ -258,7 +258,7 @@ pub async fn labels_create(
 ) -> Result<Response> {
     let user = users::Model::find_by_pid(&ctx.db, &auth.claims.pid).await?;
     let row = find_repo(&ctx, &owner, &repo, Some(user.id)).await?;
-    if !row.can_write(user.id) {
+    if !row.can_write(&ctx.db, user.id).await? {
         return not_found();
     }
     let label =

@@ -14,7 +14,7 @@
 
 use super::_entities::repositories::Column;
 pub use super::_entities::repositories::{ActiveModel, Entity, Model};
-use super::users;
+use super::{collaborators, users};
 use loco_rs::prelude::*;
 use sea_orm::entity::prelude::*;
 use std::path::PathBuf;
@@ -85,6 +85,52 @@ pub fn repo_dir(base: &str, owner: &str, name: &str) -> Result<PathBuf> {
     Ok(PathBuf::from(base).join(owner).join(format!("{name}.git")))
 }
 
+/// Roles that can be granted to a collaborator. The owner is implicit and is
+/// not stored in the `collaborators` table.
+pub const ROLE_READ: &str = "read";
+pub const ROLE_WRITE: &str = "write";
+pub const ROLE_ADMIN: &str = "admin";
+pub const ROLE_OWNER: &str = "owner";
+
+/// The actions a user may take on a repository.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RepoAction {
+    /// Clone, fetch and browse code, issues and pull requests.
+    Read,
+    /// Push, and create/merge issues and pull requests.
+    Write,
+    /// Manage collaborators and repository settings.
+    Admin,
+}
+
+impl RepoAction {
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Read => "read",
+            Self::Write => "write",
+            Self::Admin => "admin",
+        }
+    }
+}
+
+/// Whether a collaborator role grants an action. The owner bypasses this.
+#[must_use]
+pub fn role_allows(role: &str, action: RepoAction) -> bool {
+    match role {
+        ROLE_ADMIN => true,
+        ROLE_WRITE => matches!(action, RepoAction::Read | RepoAction::Write),
+        ROLE_READ => action == RepoAction::Read,
+        _ => false,
+    }
+}
+
+/// Whether a string is a grantable collaborator role.
+#[must_use]
+pub fn is_collaborator_role(role: &str) -> bool {
+    matches!(role, ROLE_READ | ROLE_WRITE | ROLE_ADMIN)
+}
+
 /// Read-oriented domain logic.
 impl Model {
     /// Whether `user_id` owns this repository.
@@ -93,18 +139,73 @@ impl Model {
         self.user_id == user_id
     }
 
-    /// Single read-authorization rule used by REST and git transport alike.
-    /// Public repos are readable by anyone; private ones only by the owner.
-    /// Collaborators will be added to this method in Phase 4.
-    #[must_use]
-    pub fn can_read(&self, viewer_id: Option<i64>) -> bool {
-        !self.is_private() || viewer_id == Some(self.user_id)
+    /// The single authorization rule used by REST handlers *and* git transport.
+    ///
+    /// The owner may do everything. Public repositories grant `Read` to anyone.
+    /// Other users are checked against their collaborator role.
+    ///
+    /// # Errors
+    /// Returns a database error if the collaborator lookup fails.
+    pub async fn can(
+        &self,
+        db: &DatabaseConnection,
+        user_id: Option<i64>,
+        action: RepoAction,
+    ) -> Result<bool> {
+        if user_id == Some(self.user_id) {
+            return Ok(true);
+        }
+        if action == RepoAction::Read && !self.is_private() {
+            return Ok(true);
+        }
+        let Some(user_id) = user_id else {
+            return Ok(false);
+        };
+        let collaborator = collaborators::Entity::find_for(db, self.id, user_id).await?;
+        Ok(collaborator.is_some_and(|row| role_allows(&row.role, action)))
     }
 
-    /// Write-authorization rule. Only the owner may mutate a repository.
-    #[must_use]
-    pub fn can_write(&self, user_id: i64) -> bool {
-        self.user_id == user_id
+    /// Convenience wrapper for [`Self::can`] with [`RepoAction::Read`].
+    ///
+    /// # Errors
+    /// Returns a database error if the collaborator lookup fails.
+    pub async fn can_read(&self, db: &DatabaseConnection, viewer_id: Option<i64>) -> Result<bool> {
+        self.can(db, viewer_id, RepoAction::Read).await
+    }
+
+    /// Convenience wrapper for [`Self::can`] with [`RepoAction::Write`].
+    ///
+    /// # Errors
+    /// Returns a database error if the collaborator lookup fails.
+    pub async fn can_write(&self, db: &DatabaseConnection, user_id: i64) -> Result<bool> {
+        self.can(db, Some(user_id), RepoAction::Write).await
+    }
+
+    /// Convenience wrapper for [`Self::can`] with [`RepoAction::Admin`].
+    ///
+    /// # Errors
+    /// Returns a database error if the collaborator lookup fails.
+    pub async fn can_admin(&self, db: &DatabaseConnection, user_id: i64) -> Result<bool> {
+        self.can(db, Some(user_id), RepoAction::Admin).await
+    }
+
+    /// Highest role a user has in this repository, for display in the SPA.
+    /// Anonymous viewers get `"none"`.
+    ///
+    /// # Errors
+    /// Returns a database error if the collaborator lookup fails.
+    pub async fn role_for(&self, db: &DatabaseConnection, user_id: Option<i64>) -> Result<String> {
+        let Some(user_id) = user_id else {
+            return Ok("none".to_owned());
+        };
+        if self.is_owned_by(user_id) {
+            return Ok(ROLE_OWNER.to_owned());
+        }
+        let role = collaborators::Entity::find_for(db, self.id, user_id)
+            .await?
+            .map(|row| row.role)
+            .unwrap_or_else(|| "none".to_owned());
+        Ok(role)
     }
 
     /// The repository name as stored, or an error if a legacy row has none.
@@ -256,6 +357,18 @@ mod tests {
         assert!(validate_owner("").is_err());
         assert!(validate_owner("../alice").is_err());
         assert!(validate_owner(&"a".repeat(OWNER_MAX_LEN + 1)).is_err());
+    }
+
+    #[test]
+    fn collaborator_roles_grant_the_expected_actions() {
+        assert!(role_allows(ROLE_READ, RepoAction::Read));
+        assert!(!role_allows(ROLE_READ, RepoAction::Write));
+        assert!(role_allows(ROLE_WRITE, RepoAction::Write));
+        assert!(!role_allows(ROLE_WRITE, RepoAction::Admin));
+        assert!(role_allows(ROLE_ADMIN, RepoAction::Admin));
+        assert!(!role_allows("bogus", RepoAction::Read));
+        assert!(is_collaborator_role(ROLE_ADMIN));
+        assert!(!is_collaborator_role("owner"));
     }
 
     #[test]

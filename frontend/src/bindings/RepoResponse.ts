@@ -3,4 +3,9 @@
 /**
  * A repository as shown in lists and overview pages.
  */
-export type RepoResponse = { id: number, owner: string, name: string, description: string | null, is_private: boolean, clone_url: string, };
+export type RepoResponse = { id: number, owner: string, name: string, description: string | null, is_private: boolean, clone_url: string, 
+/**
+ * The requesting user's role: `owner`, `admin`, `write`, `read` or `none`.
+ * The SPA uses this to show/hide management controls.
+ */
+viewer_role: string, };

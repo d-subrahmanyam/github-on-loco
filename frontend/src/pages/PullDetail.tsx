@@ -14,7 +14,7 @@ import { getToken } from '../auth/token'
 import { pullRequested } from '../store/pullsSlice'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { card, codeBox, input, primaryButton, secondaryButton } from '../ui'
-import { useRepoParams } from './RepoLayout'
+import { canWriteRole, useRepoParams, useRepoRole } from './RepoLayout'
 
 /** One PR: state controls, commit/file compare and review conversation. */
 export function PullDetail() {
@@ -30,6 +30,7 @@ export function PullDetail() {
 
   const scope = `${owner}/${name}`
   const signedIn = Boolean(getToken())
+  const canWrite = canWriteRole(useRepoRole())
 
   useEffect(() => {
     if (!Number.isFinite(prNumber)) return
@@ -140,7 +141,7 @@ export function PullDetail() {
                 {current.base_ref}
               </p>
             </div>
-            {signedIn && current.state === 'open' && (
+            {canWrite && current.state === 'open' && (
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -160,7 +161,7 @@ export function PullDetail() {
                 </button>
               </div>
             )}
-            {signedIn && current.state === 'closed' && (
+            {canWrite && current.state === 'closed' && (
               <button
                 type="button"
                 disabled={loading.state}

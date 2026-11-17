@@ -8,9 +8,9 @@ implementation, `git http-backend`.
 
 | Route | Method | Purpose | Auth |
 |---|---|---|---|
-| `/{owner}/{repo}/info/refs?service=...` | GET | Advertise refs; also starts push when `service=git-receive-pack` | push only |
-| `/{owner}/{repo}/git-upload-pack` | POST | fetch/clone objects | anonymous |
-| `/{owner}/{repo}/git-receive-pack` | POST | accept pushed objects | required |
+| `/{owner}/{repo}/info/refs?service=...` | GET | Advertise refs; also starts push when `service=git-receive-pack` | `Write` for push, `Read` for private read |
+| `/{owner}/{repo}/git-upload-pack` | POST | fetch/clone objects | `Read` for private repos, anonymous for public |
+| `/{owner}/{repo}/git-receive-pack` | POST | accept pushed objects | `Write` |
 
 The `repo` segment must end in `.git` and its bare name must pass
 `repositories::validate_name`.
@@ -23,7 +23,7 @@ The `repo` segment must end in `.git` and its bare name must pass
 - `GIT_HTTP_EXPORT_ALL=1` — allows serving every repo under the root;
 - `PATH_INFO` — `/{owner}/{repo}/<git command>`;
 - `REQUEST_METHOD`, `QUERY_STRING`, `CONTENT_TYPE`, `CONTENT_LENGTH`;
-- `REMOTE_USER` — the authenticated owner, when applicable.
+- `REMOTE_USER` — the authenticated user's handle (owner or collaborator), when applicable.
 
 The request body is written to the child's stdin. The child's stdout is split
 at the first blank line (`\r\n\r\n` or `\n\n`); the head is parsed into HTTP
@@ -55,19 +55,26 @@ git remote set-url origin http://alice:<PAT>@localhost:5150/alice/hello.git
 git push origin main
 ```
 
-## Visibility
+## Visibility and permissions
 
-Private repositories require authentication for **all** access:
+Every access — REST or git — goes through one method:
+`repositories::Model::can(db, user_id, action)` with actions `Read`, `Write` and
+`Admin`. The owner has every action; a public repo grants `Read` to anyone;
+other users are checked against their `collaborators` row:
+`read` → Read, `write` → Read + Write, `admin` → all three.
 
-- browse REST endpoints call `repositories::Model::can_read(viewer_id)` and
-  answer 404 for anonymous or non-owner viewers;
-- `git http-backend` routes require Basic auth on both `info/refs` (any
-  service) and `git-upload-pack`; pushes were already authenticated;
-- issue and label endpoints use the same `can_read` rule, with owner-only
-  checks for state changes and label creation.
+- Browse REST endpoints call `can(..., Read)` and answer 404 for viewers without
+  a grant — including anonymous viewers of private repos.
+- `git http-backend` requires Basic auth for private-repo reads and for every
+  push. `info/refs` checks `Read` for `git-upload-pack` and `Write` for
+  `git-receive-pack`; `git-upload-pack` and `git-receive-pack` check the same
+  actions. The Basic username may be an email or handle, and the password may
+  be a PAT or (locally) the account password.
+- Issue, label, PR and collaborator endpoints use the same rule: creating or
+  changing issues/PRs needs `Write`, managing collaborators needs `Admin`.
 
-This is the single authorization rule; collaborators (Phase 4) will extend it
-rather than add a second permission system.
+Because the git and REST paths share the rule, granting or revoking a
+collaborator takes effect immediately on both sides.
 
 ## Known gaps
 

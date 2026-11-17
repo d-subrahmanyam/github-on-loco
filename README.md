@@ -29,6 +29,9 @@ end-to-end slice of that product.
 - **Pull requests** — per-repository numbering, a three-dot compare view
   (commits + per-file patches), review comments, and merges performed by a
   background worker with a git compare-and-swap guard.
+- **Collaborators** — grant `read`, `write` or `admin` roles on a repository.
+  A single `can(user, action)` rule drives REST endpoints and git clone/push
+  auth, so access changes take effect everywhere at once.
 - **Caching** — branch heads and default-branch commits are cached in Postgres;
   git remains the source of truth and a push invalidates the cache.
 - **Frontend** — React + Vite SPA with Redux Toolkit slices and Redux Saga for
@@ -130,6 +133,6 @@ database on every boot.
 
 ## Not yet implemented
 
-Collaborators, roles and organisations, branch protection, stars/forks,
-notifications, search, and horizontal scaling of git storage. See
+Organisations and teams, branch protection, stars/forks/watches, activity
+events, notifications, search, and horizontal scaling of git storage. See
 [docs/roadmap.md](docs/roadmap.md) for the planned phases.

@@ -4,6 +4,7 @@
 //! `frontend/src/bindings/`, so a change to the API contract is a compile-time
 //! event on both sides.
 
+pub mod collaborators;
 pub mod common;
 pub mod issues;
 pub mod pulls;

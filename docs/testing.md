@@ -51,16 +51,22 @@ for obtaining a JWT and building the `Authorization` header.
 - **Issues**: per-repo numbering, label attachment/validation, state
   transitions, comments and label CRUD; request tests cover the full issue
   lifecycle including authentication failures for blank titles/bad labels.
-- **Pull requests**: model tests for numbering/state/merge recording and
-  review-comment scoping; request tests exercise the full flow against a real
-  bare repo (open → compare → comment → merge → browse the merged file), private
-  visibility, auth requirements and a genuine merge conflict that leaves the PR
-  open. `support::seed_branch_commit` builds divergent branches for these tests.
+- **Pull requests**: model tests for numbering/state/merge recording, review-comment
+  scoping and push-driven head-SHA refresh; request tests exercise the full flow
+  against a real bare repo (open → compare → comment → merge → browse the merged
+  file), private visibility, auth requirements, a genuine merge conflict that
+  leaves the PR open, and merging after a late push/reopen.
+  `support::seed_branch_commit` builds divergent branches for these tests.
+- **Collaborators and permissions**: unit tests for role → action mapping;
+  model tests for grants, role changes, revocation and the unified `can` rule;
+  request tests for add/update/remove, invalid roles, non-admin rejection, and
+  the same grant taking effect over REST *and* git (read can clone a private
+  repo, write can push, removal revokes both).
 - **Frontend**: Vitest + Testing Library (`pnpm test` in `frontend/`) cover the
-  repository/issue/pull/token sagas against a mocked `fetch` (including
-  stale-response protection), the password visibility toggle, token storage and
-  logout routing, and rendering of the issue and PR lists. `pnpm build` still
-  type-checks everything.
+  repository/issue/pull/collaborator/token sagas against a mocked `fetch`
+  (including stale-response protection), the password visibility toggle, token
+  storage and logout routing, and rendering of the issue, PR and collaborator
+  pages. `pnpm build` still type-checks everything.
 - **Tasks**: user create/delete.
 
 ## Writing a new request test

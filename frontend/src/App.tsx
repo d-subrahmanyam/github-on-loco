@@ -5,6 +5,7 @@ import { clearToken, getTokenSnapshot, subscribeToken } from './auth/token'
 import { browseReset } from './store/browseSlice'
 import { useAppDispatch } from './store/hooks'
 import { issuesReset } from './store/issuesSlice'
+import { collaboratorsReset } from './store/collaboratorsSlice'
 import { pullsReset } from './store/pullsSlice'
 import { reset as resetRepositories } from './store/repositoriesSlice'
 import { tokensReset } from './store/tokensSlice'
@@ -24,6 +25,7 @@ export function App() {
     dispatch(resetRepositories())
     dispatch(issuesReset())
     dispatch(pullsReset())
+    dispatch(collaboratorsReset())
     dispatch(tokensReset())
     navigate('/login', { replace: true })
   }

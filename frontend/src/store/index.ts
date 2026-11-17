@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit'
 import createSagaMiddleware from 'redux-saga'
 import browseReducer from './browseSlice'
+import collaboratorsReducer from './collaboratorsSlice'
 import issuesReducer from './issuesSlice'
 import pullsReducer from './pullsSlice'
 import repositoriesReducer from './repositoriesSlice'
@@ -14,6 +15,7 @@ export function createAppStore() {
     reducer: {
       repositories: repositoriesReducer,
       browse: browseReducer,
+      collaborators: collaboratorsReducer,
       issues: issuesReducer,
       pulls: pullsReducer,
       tokens: tokensReducer,

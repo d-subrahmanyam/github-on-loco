@@ -2,6 +2,7 @@ import type { PayloadAction } from '@reduxjs/toolkit'
 import { all, call, put, takeEvery, takeLatest } from 'redux-saga/effects'
 import type { SagaIterator } from 'redux-saga'
 import { ApiClientError } from '../api/client'
+import { collaboratorsApi } from '../api/collaborators'
 import { issuesApi } from '../api/issues'
 import { pullsApi } from '../api/pulls'
 import { repositoriesApi } from '../api/repositories'
@@ -20,6 +21,12 @@ import {
   browseSucceeded,
   type BrowseRequest,
 } from './browseSlice'
+import {
+  collaboratorFailed,
+  collaboratorRequested,
+  collaboratorSucceeded,
+  type CollaboratorRequest,
+} from './collaboratorsSlice'
 import {
   issueFailed,
   issueRequested,
@@ -275,6 +282,37 @@ function* fetchPull(action: PayloadAction<PullRequestAction>): SagaIterator {
   }
 }
 
+function* fetchCollaborator(action: PayloadAction<CollaboratorRequest>): SagaIterator {
+  const { part, key, owner, name, username, role, userId } = action.payload
+  try {
+    let data: unknown
+    switch (part) {
+      case 'list':
+        data = yield call(collaboratorsApi.list, owner, name)
+        break
+      case 'add':
+        data = yield call(collaboratorsApi.add, owner, name, {
+          username: username ?? '',
+          role: role ?? 'read',
+        })
+        break
+      case 'update':
+        data = yield call(collaboratorsApi.update, owner, name, userId ?? 0, {
+          role: role ?? 'read',
+        })
+        break
+      case 'remove':
+        yield call(collaboratorsApi.remove, owner, name, userId ?? 0)
+        // The DELETE body is empty; hand the slice the id it needs to prune.
+        data = { user_id: userId ?? 0 }
+        break
+    }
+    yield put(collaboratorSucceeded({ part, key, data }))
+  } catch (err) {
+    yield put(collaboratorFailed({ part, key, error: errorMessage(err) }))
+  }
+}
+
 function* fetchToken(action: PayloadAction<TokenRequest>): SagaIterator {
   const { part, key, params, id } = action.payload
   try {
@@ -309,6 +347,7 @@ export default function* rootSaga(): SagaIterator {
     // stale responses are dropped by the key stored in issuesSlice.
     takeEvery(issueRequested.type, fetchIssue),
     takeEvery(pullRequested.type, fetchPull),
+    takeEvery(collaboratorRequested.type, fetchCollaborator),
     takeEvery(tokenRequested.type, fetchToken),
   ])
 }

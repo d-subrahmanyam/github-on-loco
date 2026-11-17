@@ -2,9 +2,10 @@
 //!
 //! Loco handles REST; git has its own wire protocol. Rather than reimplement
 //! it, these handlers translate the incoming request into the CGI environment
-//! expected by `git http-backend` and stream its response back. Reads are
-//! anonymous; writes require HTTP Basic auth where the password may be either
-//! the account password (local convenience) or a personal access token.
+//! expected by `git http-backend` and stream its response back. Public reads
+//! are anonymous; private reads and all writes require HTTP Basic auth, with
+//! the same `repositories::Model::can` rule used by the REST handlers. The
+//! password may be a personal access token or (locally) the account password.
 
 use axum::{
     body::Bytes,
@@ -37,44 +38,51 @@ fn unauthorized_basic() -> Result<Response> {
     Ok(response)
 }
 
-/// Authenticates a push. The Basic password is first tried as a PAT, then as
-/// the account password. In both cases the resolved user must own the repo.
-async fn verified_owner_login(
-    ctx: &AppContext,
-    headers: &HeaderMap,
-    expected_owner: &str,
-) -> Option<String> {
-    if repo_model::validate_owner(expected_owner).is_err() {
-        return None;
-    }
-
-    let auth_header = headers.get(header::AUTHORIZATION)?;
-    let auth_str = auth_header.to_str().ok()?;
+/// Resolves Basic credentials to a user. The password is first tried as a PAT
+/// (which encodes its own row id, so the username is not trusted), then as the
+/// account password for local development.
+async fn authenticated_user(ctx: &AppContext, headers: &HeaderMap) -> Option<users::Model> {
+    let auth_str = headers.get(header::AUTHORIZATION)?.to_str().ok()?;
     let encoded = auth_str.strip_prefix("Basic ")?;
-    let decoded_bytes = STANDARD.decode(encoded).ok()?;
-    let credentials = String::from_utf8(decoded_bytes).ok()?;
+    let credentials = String::from_utf8(STANDARD.decode(encoded).ok()?).ok()?;
     let (login, secret) = credentials.split_once(':')?;
 
-    // A personal access token encodes its own row id, so it can be resolved
-    // without trusting the Basic username.
     if let Ok((_token, user)) = personal_access_tokens::Entity::authenticate(&ctx.db, secret).await
     {
-        if user.owner_handle() == expected_owner {
-            return Some(user.owner_handle().to_owned());
-        }
+        return Some(user);
     }
 
-    // Password fallback for local development. Accept either email or handle
-    // as the Basic username.
-    let user = match users::Model::find_by_email(&ctx.db, login).await {
-        Ok(user) => user,
-        Err(_) => users::Model::find_by_username(&ctx.db, login).await.ok()?,
-    };
-    if user.verify_password(secret) && user.owner_handle() == expected_owner {
-        return Some(user.owner_handle().to_owned());
+    // Accept either email or handle as the Basic username.
+    match users::Model::find_by_email(&ctx.db, login).await {
+        Ok(user) if user.verify_password(secret) => Some(user),
+        _ => users::Model::find_by_username(&ctx.db, login)
+            .await
+            .ok()
+            .filter(|user| user.verify_password(secret)),
     }
+}
 
-    None
+/// Authenticates a git request through the repository's single `can` rule.
+/// Returns the handle to pass to `git http-backend` as `REMOTE_USER`.
+async fn authorize_git_request(
+    ctx: &AppContext,
+    headers: &HeaderMap,
+    repo: &repo_model::Model,
+    action: repo_model::RepoAction,
+) -> Option<String> {
+    let user = authenticated_user(ctx, headers).await?;
+    if !repo.can(&ctx.db, Some(user.id), action).await.ok()? {
+        return None;
+    }
+    Some(user.owner_handle().to_owned())
+}
+
+/// Loads a repository from the `.git`-suffixed path segment.
+async fn find_git_repo(ctx: &AppContext, owner: &str, repo: &str) -> Option<repo_model::Model> {
+    let bare = repo.strip_suffix(".git").unwrap_or(repo);
+    repo_model::Model::find_by_owner_and_name(&ctx.db, owner, bare)
+        .await
+        .ok()
 }
 
 async fn run_git_http_backend(
@@ -187,10 +195,19 @@ async fn info_refs(
     ensure_git_repo_path(&repo)?;
 
     // Pushes always need auth; private repositories also require it for reads.
-    let needs_auth = matches!(query.service.as_deref(), Some("git-receive-pack"))
-        || repo_is_private(&ctx, &owner, &repo).await;
+    let is_push = matches!(query.service.as_deref(), Some("git-receive-pack"));
+    let row = find_git_repo(&ctx, &owner, &repo).await;
+    let needs_auth = is_push || row.as_ref().is_none_or(|row| row.is_private());
     let remote_user = if needs_auth {
-        let Some(login) = verified_owner_login(&ctx, &headers, &owner).await else {
+        let Some(row) = row.as_ref() else {
+            return unauthorized_basic();
+        };
+        let action = if is_push {
+            repo_model::RepoAction::Write
+        } else {
+            repo_model::RepoAction::Read
+        };
+        let Some(login) = authorize_git_request(&ctx, &headers, row, action).await else {
             return unauthorized_basic();
         };
         Some(login)
@@ -220,8 +237,14 @@ async fn upload_pack(
     let settings = AppSettings::from_context(&ctx)?;
     ensure_git_repo_path(&repo)?;
 
-    let remote_user = if repo_is_private(&ctx, &owner, &repo).await {
-        let Some(login) = verified_owner_login(&ctx, &headers, &owner).await else {
+    let row = find_git_repo(&ctx, &owner, &repo).await;
+    let remote_user = if row.as_ref().is_none_or(|row| row.is_private()) {
+        let Some(row) = row.as_ref() else {
+            return unauthorized_basic();
+        };
+        let Some(login) =
+            authorize_git_request(&ctx, &headers, row, repo_model::RepoAction::Read).await
+        else {
             return unauthorized_basic();
         };
         Some(login)
@@ -243,22 +266,10 @@ async fn upload_pack(
     .await
 }
 
-/// Whether a repository is private. An unknown repository fails closed so its
-/// existence is not leaked through an unauthenticated response.
-async fn repo_is_private(ctx: &AppContext, owner: &str, repo: &str) -> bool {
-    let bare = repo.strip_suffix(".git").unwrap_or(repo);
-    repo_model::Model::find_by_owner_and_name(&ctx.db, owner, bare)
-        .await
-        .map_or(true, |row| row.is_private())
-}
-
 /// Best-effort invalidation of the browse cache after a successful push.
 /// Cache staleness must never fail an otherwise successful push.
 async fn invalidate_repo_cache(ctx: &AppContext, owner: &str, repo: &str) {
-    let bare = repo.strip_suffix(".git").unwrap_or(repo);
-    if let Ok(row) =
-        crate::models::repositories::Model::find_by_owner_and_name(&ctx.db, owner, bare).await
-    {
+    if let Some(row) = find_git_repo(ctx, owner, repo).await {
         let _ = crate::models::branches::Entity::clear_for_repository(&ctx.db, row.id).await;
         let _ = crate::models::commits::Entity::clear_for_repository(&ctx.db, row.id).await;
     }
@@ -273,7 +284,7 @@ async fn invalidate_repo_cache(ctx: &AppContext, owner: &str, repo: &str) {
 /// exercise the same post-push bookkeeping against a local bare repository.
 pub async fn sync_pull_request_heads(ctx: &AppContext, owner: &str, repo: &str) {
     let bare = repo.strip_suffix(".git").unwrap_or(repo);
-    let Ok(row) = repo_model::Model::find_by_owner_and_name(&ctx.db, owner, bare).await else {
+    let Some(row) = find_git_repo(ctx, owner, repo).await else {
         return;
     };
     let Ok(prs) =
@@ -319,7 +330,12 @@ async fn receive_pack(
     let settings = AppSettings::from_context(&ctx)?;
     ensure_git_repo_path(&repo)?;
 
-    let Some(login) = verified_owner_login(&ctx, &headers, &owner).await else {
+    let Some(row) = find_git_repo(&ctx, &owner, &repo).await else {
+        return unauthorized_basic();
+    };
+    let Some(login) =
+        authorize_git_request(&ctx, &headers, &row, repo_model::RepoAction::Write).await
+    else {
         return unauthorized_basic();
     };
 

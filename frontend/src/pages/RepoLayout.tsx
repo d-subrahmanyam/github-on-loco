@@ -6,6 +6,7 @@ import {
   FaFolder,
   FaGitAlt,
   FaHistory,
+  FaUsers,
 } from 'react-icons/fa'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useOutletContext, useParams } from 'react-router'
@@ -23,11 +24,25 @@ export function useRepoParams(): RepoParams {
   return useOutletContext<RepoParams>()
 }
 
+/** The viewer's role on this repo, as reported by the overview endpoint. */
+export function useRepoRole(): string {
+  return useAppSelector((state) => state.browse.overview?.viewer_role ?? 'none')
+}
+
+export function canWriteRole(role: string): boolean {
+  return role === 'owner' || role === 'admin' || role === 'write'
+}
+
+export function canAdminRole(role: string): boolean {
+  return role === 'owner' || role === 'admin'
+}
+
 /** Header, tabs and overview data shared by every repository page. */
 export function RepoLayout() {
   const dispatch = useAppDispatch()
   const { owner = '', name = '' } = useParams()
   const { overview, loading, error } = useAppSelector((state) => state.browse)
+  const role = useRepoRole()
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -96,6 +111,11 @@ export function RepoLayout() {
           <NavLink to="pulls" className={tabClass}>
             <FaGitAlt /> Pull requests
           </NavLink>
+          {canAdminRole(role) && (
+            <NavLink to="collaborators" className={tabClass}>
+              <FaUsers /> Collaborators
+            </NavLink>
+          )}
         </nav>
       </section>
 

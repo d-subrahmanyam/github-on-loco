@@ -37,7 +37,7 @@ async fn find_repo(
     viewer: Option<i64>,
 ) -> Result<repositories::Model> {
     let row = repositories::Model::find_by_owner_and_name(&ctx.db, owner, repo).await?;
-    if !row.can_read(viewer) {
+    if !row.can_read(&ctx.db, viewer).await? {
         return not_found();
     }
     Ok(row)
@@ -159,7 +159,7 @@ pub async fn create(
 ) -> Result<Response> {
     let user = users::Model::find_by_pid(&ctx.db, &auth.claims.pid).await?;
     let row = find_repo(&ctx, &owner, &repo, Some(user.id)).await?;
-    if !row.can_write(user.id) {
+    if !row.can_write(&ctx.db, user.id).await? {
         return not_found();
     }
     let git = open_git(&ctx, &owner, &row)?;
@@ -193,9 +193,14 @@ pub async fn show(
     format::json(pr_response(&ctx.db, pr).await?)
 }
 
-/// True for the repository owner or the PR author.
-fn can_modify_pr(user_id: i64, repo: &repositories::Model, pr: &pull_requests::Model) -> bool {
-    repo.can_write(user_id) || pr.user_id == user_id
+/// True for a repository writer (or admin/owner) or the PR author.
+async fn can_modify_pr(
+    db: &sea_orm::DatabaseConnection,
+    user_id: i64,
+    repo: &repositories::Model,
+    pr: &pull_requests::Model,
+) -> Result<bool> {
+    Ok(repo.can_write(db, user_id).await? || pr.user_id == user_id)
 }
 
 /// Shared handler for the close/reopen transitions.
@@ -210,7 +215,7 @@ async fn set_state(
     let user = users::Model::find_by_pid(&ctx.db, &auth.claims.pid).await?;
     let row = find_repo(ctx, owner, repo, Some(user.id)).await?;
     let pr = pull_requests::Model::find_by_number(&ctx.db, row.id, number).await?;
-    if !can_modify_pr(user.id, &row, &pr) {
+    if !can_modify_pr(&ctx.db, user.id, &row, &pr).await? {
         return not_found();
     }
     if pr.is_merged() {
@@ -261,7 +266,7 @@ pub async fn merge(
 ) -> Result<Response> {
     let user = users::Model::find_by_pid(&ctx.db, &auth.claims.pid).await?;
     let row = find_repo(&ctx, &owner, &repo, Some(user.id)).await?;
-    if !row.can_write(user.id) {
+    if !row.can_write(&ctx.db, user.id).await? {
         return not_found();
     }
     let mut pr = pull_requests::Model::find_by_number(&ctx.db, row.id, number).await?;

@@ -6,7 +6,7 @@ import { getToken } from '../auth/token'
 import { issueRequested } from '../store/issuesSlice'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { card, input, primaryButton } from '../ui'
-import { useRepoParams } from './RepoLayout'
+import { canWriteRole, useRepoParams, useRepoRole } from './RepoLayout'
 
 /** One issue: state controls, labels, comments and a reply form. */
 export function IssueDetail() {
@@ -18,6 +18,7 @@ export function IssueDetail() {
   const [reply, setReply] = useState('')
 
   const scope = `${owner}/${name}`
+  const canWrite = canWriteRole(useRepoRole())
 
   useEffect(() => {
     if (!Number.isFinite(issueNumber)) return
@@ -91,19 +92,21 @@ export function IssueDetail() {
                 #{current.number} opened by {current.author}
               </p>
             </div>
-            <button
-              type="button"
-              disabled={loading.state}
-              onClick={() => changeState(current.state === 'open' ? 'closed' : 'open')}
-              className={
-                current.state === 'open'
-                  ? 'inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50'
-                  : `${primaryButton} disabled:opacity-50`
-              }
-            >
-              {current.state === 'open' ? <FaCheck /> : <FaRedo />}
-              {current.state === 'open' ? 'Close issue' : 'Reopen issue'}
-            </button>
+            {canWrite && (
+              <button
+                type="button"
+                disabled={loading.state}
+                onClick={() => changeState(current.state === 'open' ? 'closed' : 'open')}
+                className={
+                  current.state === 'open'
+                    ? 'inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50'
+                    : `${primaryButton} disabled:opacity-50`
+                }
+              >
+                {current.state === 'open' ? <FaCheck /> : <FaRedo />}
+                {current.state === 'open' ? 'Close issue' : 'Reopen issue'}
+              </button>
+            )}
           </div>
 
           {current.labels.length > 0 && (

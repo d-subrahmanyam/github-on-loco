@@ -50,17 +50,24 @@ Status legend: ✅ done · 🟡 partial · ⬜ planned.
       be overwritten. Conflicts leave the PR open.
 - [x] SPA pull request list, new-PR form, detail with compare/diff and comments,
       close/reopen and merge controls.
-- Remaining: branch protection rules after permissions exist (Phase 4).
+- Remaining: branch protection rules (builds on the Phase 4 roles).
 
-## Phase 4 — Collaboration and permissions ⬜
+## Phase 4 — Collaboration and permissions 🟡
 
-- `collaborators`, organizations, teams, roles.
-- A single `can(user, repo, action)` model method used by REST *and* git auth.
 - [x] Owner-only private repo enforcement on browse, git transport and issues
       (pulled forward because it was a security gap); token issue/revoke API
       and SPA page.
-- Remaining: collaborators/roles extend `can_read` / `can_write`.
-- Stars, forks, watches, activity events from `events`.
+- [x] `collaborators` table with `read`/`write`/`admin` roles, per-repository
+      unique grants, and a manager in the SPA.
+- [x] One `repositories::Model::can(user, action)` rule used by **all** REST
+      handlers and by git HTTP auth. `can_read`/`can_write`/`can_admin` are thin
+      wrappers, so there is no second permission system.
+- [x] Git clone/fetch/push follow the same rule: a `read` collaborator can clone
+      a private repo, `write` can also push, `admin` can manage access.
+- [x] `viewer_role` on the repository overview lets the SPA show only the
+      controls the current user is allowed to use.
+- Remaining: organizations, teams, stars, forks, watches, activity events, and
+      branch protection rules.
 
 ## Phase 5 — Polish and scale ⬜
 

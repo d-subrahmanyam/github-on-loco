@@ -2,12 +2,29 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, Outlet, RouterProvider } from 'react-router'
 import { Provider } from 'react-redux'
 import { describe, expect, it, vi } from 'vitest'
+import { browseRequested, browseSucceeded } from '../store/browseSlice'
 import { createAppStore } from '../store'
 import { jsonResponse } from '../test/helpers'
 import { PullList } from './PullList'
 
 function renderPulls() {
   const store = createAppStore()
+  store.dispatch(browseRequested({ part: 'overview', key: 'ov', owner: 'alice', name: 'hello' }))
+  store.dispatch(
+    browseSucceeded({
+      part: 'overview',
+      key: 'ov',
+      data: {
+        id: 1,
+        owner: 'alice',
+        name: 'hello',
+        description: null,
+        is_private: false,
+        clone_url: '',
+        viewer_role: 'owner',
+      },
+    }),
+  )
   const router = createMemoryRouter(
     [
       {

@@ -26,6 +26,9 @@ pub struct RepoResponse {
     pub description: Option<String>,
     pub is_private: bool,
     pub clone_url: String,
+    /// The requesting user's role: `owner`, `admin`, `write`, `read` or `none`.
+    /// The SPA uses this to show/hide management controls.
+    pub viewer_role: String,
 }
 
 /// A branch name and the commit it points at.
