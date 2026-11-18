@@ -1,5 +1,10 @@
 # Architecture
 
+For deployment topology, the module boundaries needed before a service split,
+and the later microservices/events/service-mesh design, see
+[deployment-architecture.md](deployment-architecture.md). This document stays
+focused on the code's internal structure.
+
 ## The central decision: two sources of truth
 
 The easiest way to get a git-hosting app wrong is to make the database and the

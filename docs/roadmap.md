@@ -83,6 +83,11 @@ Status legend: ✅ done · 🟡 partial · ⬜ planned.
 ## Phase 5 — Polish and scale ⬜
 
 - Releases/tags, search, notification emails via the mailer + queue, webhooks.
+- Deployment and scaling design is recorded in
+  [docs/deployment-architecture.md](deployment-architecture.md): shared git
+  storage and split web/worker deploys first, then a modular-monolith boundary
+  pass, then a strangler migration to per-context services with an event broker
+  and a service mesh.
 - Move repo storage to a shared volume or object storage for multi-instance.
 - Background workers for heavy git operations; scheduler for ref sync.
 - Rate limiting and audit logs.

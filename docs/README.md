@@ -8,6 +8,7 @@ these files are the contract.
 | Document | What it answers |
 |---|---|
 | [architecture.md](architecture.md) | How the app is split up, where state lives, how a request flows, and why |
+| [deployment-architecture.md](deployment-architecture.md) | Recommended infrastructure today, module boundaries to enforce, and the later microservices/events/service-mesh design |
 | [data-model.md](data-model.md) | What is in Postgres now and what the GitHub-shaped model looks like next |
 | [design-practices.md](design-practices.md) | The conventions every change must follow, plus a review checklist |
 | [git-transport.md](git-transport.md) | How clone/fetch/push work, and how authentication is handled |
