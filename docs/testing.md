@@ -81,6 +81,12 @@ for obtaining a JWT and building the `Authorization` header.
   self-review rejection, and a synthetic receive-pack push that is rejected for
   a writer but allowed through for the owner. The approval event shows up in the
   activity feed.
+- **Git HTTP authorization**: request tests check that missing credentials get
+  a 401 with `WWW-Authenticate`, a missing repo gets a clear 404 only for an
+  authenticated caller (401 for anonymous, so existence is not leaked), a
+  credentialed user without write access to a public repo gets a 403 with the
+  reason, and a private repo unanswered by a grant keeps returning 404. Existing
+  collaborator and organization tests assert the new 404 for private repos.
 - **Frontend**: Vitest + Testing Library (`pnpm test` in `frontend/`) cover the
   repository/fork/issue/organization/pull/collaborator/protection/social/token sagas against a mocked `fetch`
   (including stale-response protection), the password visibility toggle, token

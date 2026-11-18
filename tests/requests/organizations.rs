@@ -118,7 +118,7 @@ async fn org_management_is_owner_only_and_team_grants_give_git_access() {
             .get(push_url)
             .add_header(member_basic.0.clone(), member_basic.1.clone())
             .await;
-        assert_eq!(before.status_code(), 401, "no grant yet");
+        assert_eq!(before.status_code(), 404, "private repo, no grant yet");
 
         let granted = request
             .post(&format!(
@@ -174,7 +174,7 @@ async fn org_management_is_owner_only_and_team_grants_give_git_access() {
             .get(push_url)
             .add_header(member_basic.0, member_basic.1)
             .await;
-        assert_eq!(gone.status_code(), 401, "grant was revoked");
+        assert_eq!(gone.status_code(), 404, "grant was revoked");
     })
     .await;
 }

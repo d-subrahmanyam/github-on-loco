@@ -41,11 +41,32 @@ Clones and fetches are anonymous today. Pushes require HTTP Basic auth:
 2. If that fails, the password is tried against the account password hash. The
    Basic username may be either the email or the `username` handle. This is a
    local-development convenience; a PAT is the supported way to push remotely.
-3. In both cases the resolved user's `owner_handle()` must equal the `owner`
-   path segment. A valid credential for a different user is rejected with
-   `401` plus `WWW-Authenticate: Basic realm="Git"`.
+3. The resolved user is checked with `can(db, user_id, action)` against the
+   repository at the path. The Basic username is only a hint for the
+   password-fallback path; PATs encode their own owner. A user other than the
+   owner may push if they have a `write`/`admin` collaborator grant, or a team
+   grant on an organization-owned repository.
+
+## Failure responses
+
+| Situation | Status | Body / header |
+|---|---|---|
+| No credentials, or credentials that do not resolve to a user | `401` | `authentication required`, with `WWW-Authenticate: Basic realm="Git"` so git re-prompts |
+| Valid credentials, but no `Write` on a **public** repo | `403` | `permission denied: write access to this repository is required`, no `WWW-Authenticate` |
+| Repository does not exist, caller authenticated | `404` | `repository not found` |
+| Repository does not exist, caller anonymous | `401` | same as "no credentials", so a missing repo cannot be distinguished from a private one |
+| Private repo the caller may not read — anonymously or with insufficient grant | `404` | same as a missing repo — existence is never leaked |
+
+`WWW-Authenticate` is deliberately absent from `403` and `404`: re-prompting
+with the same credentials cannot help, and git reports the response body as the
+reason instead of looping. Private repositories use `404` for every no-access
+case, matching the REST endpoints and the SPA.
 
 ## Setting a remote
+
+Use the **git** URL from the repository page (the clone URL in the API), which
+is `/<owner>/<repo>.git`. The SPA route `/repos/<owner>/<repo>` serves HTML and
+is not a git endpoint.
 
 ```sh
 # PAT as the password; the Basic username can be anything
@@ -69,7 +90,8 @@ other users are checked against their `collaborators` row:
   push. `info/refs` checks `Read` for `git-upload-pack` and `Write` for
   `git-receive-pack`; `git-upload-pack` and `git-receive-pack` check the same
   actions. The Basic username may be an email or handle, and the password may
-  be a PAT or (locally) the account password.
+  be a PAT or (locally) the account password. See [Failure responses](#failure-responses)
+  for which status code each kind of rejection produces.
 - Issue, label, PR and collaborator endpoints use the same rule: creating or
   changing issues/PRs needs `Write`, managing collaborators needs `Admin`.
 

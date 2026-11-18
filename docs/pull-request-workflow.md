@@ -21,6 +21,45 @@ hash is stored afterwards.
 If you're using a private repository, the token is needed to *clone* as well;
 public repositories can be cloned anonymously.
 
+## Who opens the pull request
+
+Both the repository owner and other contributors open pull requests the same
+way — clone, branch, commit, push, open the PR. What differs is how they get
+permission to push the head branch:
+
+| | Repository owner | Contributor |
+|---|---|---|
+| Push access | Implicit — the owner has every action | Needs a `write`/`admin` collaborator grant, or a team grant on an org-owned repo |
+| Head branch | Pushed to their own repository | Pushed to the same repository (cross-repository PRs are not implemented yet); a fork is a way to work in your own namespace, but its branch cannot be the head of a PR in the source repo today |
+| Protected base branch | `require_pull_request` push blocks exempt admins, so the owner can still push directly | Direct pushes to the protected branch are rejected with `403`; use a PR instead |
+| Approval | The author cannot approve their own PR, so `required_approvals` still needs another reviewer | Same rule |
+
+The push URL must be the repository's **git** path, `/<owner>/<repo>.git`, where
+`<owner>` is the account (or organization) that owns the repository — not
+necessarily you. The SPA page at `/repos/<owner>/<repo>` serves HTML and is not
+a git endpoint. Set the Basic username to your handle with your PAT as the
+password:
+
+```sh
+git remote set-url origin http://<your-handle>:<token>@localhost:5150/<repo-owner>/<repo>.git
+git push -u origin feature/my-change
+```
+
+If the push is rejected, the message tells you which rule stopped it:
+
+- `401 authentication required` — no credentials, or credentials that did not
+  resolve to a user;
+- `403 permission denied: write access to this repository is required` — your
+  credentials are valid but your account has no `Write` grant on that repo; ask
+  the owner for a collaborator grant;
+- `404 repository not found` — either the `owner` path segment is wrong (a repo
+  lives under its owner's handle, which is *your* handle only for your own
+  repos), or the repository is private and you have no grant.
+
+Private repositories answer `404` for every no-access case so their existence
+is not leaked. The full decision table is in
+[git-transport.md](git-transport.md#failure-responses).
+
 ## 1. Clone the repository
 
 ```sh
@@ -39,8 +78,10 @@ pushing:
 git remote set-url origin http://<username>:<token>@localhost:5150/<owner>/<repo>.git
 ```
 
-Use your **username** (not your display name) in the URL. The token is the
-Basic-auth password.
+Use your **username** (not your display name) in the URL, and use the
+repository's owner in the path. The token is the Basic-auth password. See
+[Who opens the pull request](#who-opens-the-pull-request) for the owner vs.
+contributor permission rules and what each push failure means.
 
 ## 2. Make your change on a branch
 
@@ -102,12 +143,14 @@ final — it cannot be reopened or closed afterwards.
 
 ## Limitations to be aware of
 
-- **You need write access to open or merge PRs.** The owner and `write`/`admin`
-  collaborators have it; `read` collaborators can browse and comment but not
-  create or merge. An admin can grant access on the repository's
-  **Collaborators** tab. Both branches must still live in the same repository:
-  you can fork a repository, but cross-repository pull requests are not
-  implemented yet.
+- **You need write access to open or merge PRs.** The owner has it implicitly;
+  `write`/`admin` collaborators and members of a team with a `write`/`admin`
+  grant on an org-owned repo have it too. `read` collaborators can browse and
+  comment but not create or merge. An admin can grant access on the repository's
+  **Collaborators** tab (a `write` grant is enough). Both branches must still
+  live in the same repository: you can fork a repository, but cross-repository
+  pull requests are not implemented yet — see
+  [Who opens the pull request](#who-opens-the-pull-request).
 - **The head follows the branch.** The recorded head SHA is refreshed after
   every push, so pushing another commit (or force-pushing) to your branch
   updates the existing PR's compare view and merge target. Reload the PR page

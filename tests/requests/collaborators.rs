@@ -206,7 +206,8 @@ async fn collaborator_roles_apply_to_rest_and_git() {
         let push = "/loco/secret.git/info/refs?service=git-receive-pack";
         let guest_basic = basic_header("guest", "secret");
 
-        // No grant: private repo is invisible over REST and git.
+        // No grant: a private repo is invisible over REST and git (404, not
+        // 401 — the credentials are valid, the account has no access).
         assert_eq!(
             request
                 .get("/api/repos/loco/secret")
@@ -221,7 +222,7 @@ async fn collaborator_roles_apply_to_rest_and_git() {
                 .add_header(guest_basic.0.clone(), guest_basic.1.clone())
                 .await
                 .status_code(),
-            401
+            404
         );
 
         // Read role: can browse and clone, but not push.
@@ -254,7 +255,7 @@ async fn collaborator_roles_apply_to_rest_and_git() {
                 .add_header(guest_basic.0.clone(), guest_basic.1.clone())
                 .await
                 .status_code(),
-            401
+            404
         );
 
         // Write role: push is allowed too.
@@ -297,7 +298,7 @@ async fn collaborator_roles_apply_to_rest_and_git() {
                 .add_header(guest_basic.0, guest_basic.1)
                 .await
                 .status_code(),
-            401
+            404
         );
     })
     .await;

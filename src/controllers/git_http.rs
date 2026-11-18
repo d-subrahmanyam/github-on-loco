@@ -33,13 +33,33 @@ fn ensure_git_repo_path(repo: &str) -> Result<()> {
     Ok(())
 }
 
-fn unauthorized_basic() -> Result<Response> {
+/// No credentials (or ones that do not resolve to a user). The
+/// `WWW-Authenticate` header makes git prompt for credentials again.
+fn unauthorized_basic_response() -> Response {
     let mut response = (StatusCode::UNAUTHORIZED, "authentication required").into_response();
     response.headers_mut().insert(
         header::WWW_AUTHENTICATE,
         HeaderValue::from_static("Basic realm=\"Git\""),
     );
-    Ok(response)
+    response
+}
+
+/// The path has no repository. An authenticated caller gets a clear answer;
+/// anonymous callers keep the opaque 401 so a missing repo cannot be told apart
+/// from a private one.
+fn repository_not_found_response() -> Response {
+    (StatusCode::NOT_FOUND, "repository not found").into_response()
+}
+
+/// Credentials are valid but lack the required action. There is no
+/// `WWW-Authenticate` header: re-prompting with the same credentials would not
+/// help, so git reports the reason instead of looping.
+fn permission_denied_response() -> Response {
+    (
+        StatusCode::FORBIDDEN,
+        "permission denied: write access to this repository is required",
+    )
+        .into_response()
 }
 
 /// Resolves Basic credentials to a user. The password is first tried as a PAT
@@ -66,19 +86,54 @@ async fn authenticated_user(ctx: &AppContext, headers: &HeaderMap) -> Option<use
     }
 }
 
+/// Result of resolving a git request: the caller (if auth was needed) and the
+/// repository, or the HTTP response that should be sent instead.
+type GitAuthResult = std::result::Result<(Option<users::Model>, repo_model::Model), Box<Response>>;
+
 /// Authenticates a git request through the repository's single `can` rule.
-/// Returns the user so callers can also check admin status for branch rules.
-async fn authorize_git_request(
+///
+/// The three failure cases are kept distinct: missing credentials are a 401,
+/// a missing repo is a 404 for authenticated callers, and valid credentials
+/// without permission are a 403 — except on private repos, which answer 404 so
+/// their existence is never leaked (matching the REST endpoints).
+async fn authorize_git(
     ctx: &AppContext,
     headers: &HeaderMap,
-    repo: &repo_model::Model,
+    owner: &str,
+    repo: &str,
     action: repo_model::RepoAction,
-) -> Option<users::Model> {
-    let user = authenticated_user(ctx, headers).await?;
-    if !repo.can(&ctx.db, Some(user.id), action).await.ok()? {
-        return None;
+) -> GitAuthResult {
+    let Some(row) = find_git_repo(ctx, owner, repo).await else {
+        return Err(Box::new(
+            if authenticated_user(ctx, headers).await.is_some() {
+                repository_not_found_response()
+            } else {
+                unauthorized_basic_response()
+            },
+        ));
+    };
+
+    // Public reads are anonymous; there is no caller to attribute the request to.
+    if action == repo_model::RepoAction::Read && !row.is_private() {
+        return Ok((None, row));
     }
-    Some(user)
+
+    let Some(user) = authenticated_user(ctx, headers).await else {
+        return Err(Box::new(unauthorized_basic_response()));
+    };
+
+    match row.can(&ctx.db, Some(user.id), action).await {
+        Ok(true) => Ok((Some(user), row)),
+        Ok(false) => Err(Box::new(if row.is_private() {
+            repository_not_found_response()
+        } else {
+            permission_denied_response()
+        })),
+        Err(err) => {
+            tracing::error!(%err, "git authorization lookup failed");
+            Err(Box::new(unauthorized_basic_response()))
+        }
+    }
 }
 
 /// A protected branch refuses direct pushes. The merge worker writes via git
@@ -228,24 +283,16 @@ async fn info_refs(
 
     // Pushes always need auth; private repositories also require it for reads.
     let is_push = matches!(query.service.as_deref(), Some("git-receive-pack"));
-    let row = find_git_repo(&ctx, &owner, &repo).await;
-    let needs_auth = is_push || row.as_ref().is_none_or(|row| row.is_private());
-    let remote_user = if needs_auth {
-        let Some(row) = row.as_ref() else {
-            return unauthorized_basic();
-        };
-        let action = if is_push {
-            repo_model::RepoAction::Write
-        } else {
-            repo_model::RepoAction::Read
-        };
-        let Some(user) = authorize_git_request(&ctx, &headers, row, action).await else {
-            return unauthorized_basic();
-        };
-        Some(user.owner_handle().to_owned())
+    let action = if is_push {
+        repo_model::RepoAction::Write
     } else {
-        None
+        repo_model::RepoAction::Read
     };
+    let (user, _row) = match authorize_git(&ctx, &headers, &owner, &repo, action).await {
+        Ok(pair) => pair,
+        Err(response) => return Ok(*response),
+    };
+    let remote_user = user.map(|user| user.owner_handle().to_owned());
 
     run_git_http_backend(
         "GET",
@@ -269,20 +316,12 @@ async fn upload_pack(
     let settings = AppSettings::from_context(&ctx)?;
     ensure_git_repo_path(&repo)?;
 
-    let row = find_git_repo(&ctx, &owner, &repo).await;
-    let remote_user = if row.as_ref().is_none_or(|row| row.is_private()) {
-        let Some(row) = row.as_ref() else {
-            return unauthorized_basic();
+    let (user, _row) =
+        match authorize_git(&ctx, &headers, &owner, &repo, repo_model::RepoAction::Read).await {
+            Ok(pair) => pair,
+            Err(response) => return Ok(*response),
         };
-        let Some(user) =
-            authorize_git_request(&ctx, &headers, row, repo_model::RepoAction::Read).await
-        else {
-            return unauthorized_basic();
-        };
-        Some(user.owner_handle().to_owned())
-    } else {
-        None
-    };
+    let remote_user = user.map(|user| user.owner_handle().to_owned());
 
     run_git_http_backend(
         "POST",
@@ -362,13 +401,14 @@ async fn receive_pack(
     let settings = AppSettings::from_context(&ctx)?;
     ensure_git_repo_path(&repo)?;
 
-    let Some(row) = find_git_repo(&ctx, &owner, &repo).await else {
-        return unauthorized_basic();
-    };
-    let Some(user) =
-        authorize_git_request(&ctx, &headers, &row, repo_model::RepoAction::Write).await
-    else {
-        return unauthorized_basic();
+    let (caller, row) =
+        match authorize_git(&ctx, &headers, &owner, &repo, repo_model::RepoAction::Write).await {
+            Ok(pair) => pair,
+            Err(response) => return Ok(*response),
+        };
+    // Pushes always authenticate, so a caller is guaranteed here.
+    let Some(user) = caller else {
+        return Ok(unauthorized_basic_response());
     };
     let login = user.owner_handle().to_owned();
 
