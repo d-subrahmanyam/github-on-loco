@@ -78,7 +78,12 @@ Status legend: ✅ done · 🟡 partial · ⬜ planned.
       fork counts and "forked from" metadata on the repo overview, and an SPA
       fork button and fork list. Fork names avoid collisions with a `-fork-N`
       suffix.
-- Remaining: organizations and teams.
+- [x] Organizations and teams: org-owned repositories (a second owner kind),
+      org membership roles, teams with members, and per-team repository grants.
+      The single `can()` rule now derives repo access from org ownership plus
+      team grants, so REST and git auth both follow the same policy.
+
+## Phase 4 status: complete ✅
 
 ## Phase 5 — Polish and scale ⬜
 

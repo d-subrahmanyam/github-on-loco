@@ -4,6 +4,7 @@ import browseReducer from './browseSlice'
 import collaboratorsReducer from './collaboratorsSlice'
 import forksReducer from './forksSlice'
 import issuesReducer from './issuesSlice'
+import organizationsReducer from './organizationsSlice'
 import protectionReducer from './protectionSlice'
 import pullsReducer from './pullsSlice'
 import repositoriesReducer from './repositoriesSlice'
@@ -22,6 +23,7 @@ export function createAppStore() {
       forks: forksReducer,
       social: socialReducer,
       issues: issuesReducer,
+      organizations: organizationsReducer,
       pulls: pullsReducer,
       protection: protectionReducer,
       tokens: tokensReducer,

@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router'
 import { App } from './App'
 import { Login } from './auth/Login'
+import { OrganizationDetail } from './pages/OrganizationDetail'
 import { Register } from './auth/Register'
 import { RequireAuth } from './auth/RequireAuth'
 import { BranchProtection } from './pages/BranchProtection'
@@ -10,6 +11,7 @@ import { CommitDetail } from './pages/CommitDetail'
 import { Forks } from './pages/Forks'
 import { Commits } from './pages/Commits'
 import { Home } from './pages/Home'
+import { Organizations } from './pages/Organizations'
 import { IssueDetail } from './pages/IssueDetail'
 import { IssueList } from './pages/IssueList'
 import { PullDetail } from './pages/PullDetail'
@@ -34,6 +36,8 @@ export const router = createBrowserRouter([
         children: [
           // scaffold:routes
           { path: 'dashboard', element: <Repositories /> },
+          { path: 'organizations', element: <Organizations /> },
+          { path: 'organizations/:handle', element: <OrganizationDetail /> },
           { path: 'tokens', element: <Tokens /> },
         ],
       },

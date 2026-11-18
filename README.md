@@ -34,6 +34,9 @@ end-to-end slice of that product.
   auth, so access changes take effect everywhere at once.
 - **Stars, watches and activity** — star/watch buttons with live counts, plus a
   repository activity feed fed by an append-only event log.
+- **Organizations and teams** — repositories can be owned by an organization.
+  Owners manage teams, and a team's per-repo role feeds the same authorization
+  rule used by REST and git push.
 - **Forks** — fork any repository you can read; the fork is a full bare git copy
   with its own permissions, plus fork counts and a fork network view.
 - **Branch protection** — per-branch rules that block direct pushes to writers
@@ -140,5 +143,5 @@ database on every boot.
 
 ## Not yet implemented
 
-Organisations and teams, notifications, search, and horizontal scaling of git
-storage. See [docs/roadmap.md](docs/roadmap.md) for the planned phases.
+Notifications, search, and horizontal scaling of git storage. See
+[docs/roadmap.md](docs/roadmap.md) for the planned phases.

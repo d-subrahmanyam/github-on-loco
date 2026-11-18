@@ -347,6 +347,6 @@ consistent — by then the Repository service exists as a real boundary.
 2. Introduce the `GitStore` and `EventPublisher` ports with the current
    implementations; migrate inline event writes to the publisher.
 3. Split web and worker deployments and add the observability signals in §2.
-4. Revisit this document after the organisation/teams work, since the new owner
-   type changes who may authorize a repository and therefore the Repository
-   service's `Authorize` contract.
+4. Revisit the service split now that organizations/teams exist: the Repository
+   service's `Authorize` contract must accept both user-owned and org-owned
+   repositories, with team grants resolved inside that service.

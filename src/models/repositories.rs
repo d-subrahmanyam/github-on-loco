@@ -14,7 +14,7 @@
 
 use super::_entities::repositories::Column;
 pub use super::_entities::repositories::{ActiveModel, Entity, Model};
-use super::{collaborators, users};
+use super::{collaborators, org_members, organizations, team_members, team_repositories, users};
 use loco_rs::prelude::*;
 use sea_orm::entity::prelude::*;
 use std::path::PathBuf;
@@ -133,10 +133,17 @@ pub fn is_collaborator_role(role: &str) -> bool {
 
 /// Read-oriented domain logic.
 impl Model {
-    /// Whether `user_id` owns this repository.
+    /// Whether this repository is owned by an organization rather than a user.
+    #[must_use]
+    pub fn is_org_owned(&self) -> bool {
+        self.organization_id.is_some()
+    }
+
+    /// Whether a user directly owns this repository. Organization-owned
+    /// repositories have no direct user owner; `user_id` is only the creator.
     #[must_use]
     pub fn is_owned_by(&self, user_id: i64) -> bool {
-        self.user_id == user_id
+        !self.is_org_owned() && self.user_id == user_id
     }
 
     /// The single authorization rule used by REST handlers *and* git transport.
@@ -152,15 +159,35 @@ impl Model {
         user_id: Option<i64>,
         action: RepoAction,
     ) -> Result<bool> {
-        if user_id == Some(self.user_id) {
-            return Ok(true);
-        }
+        // Public repositories are readable by anyone, owner kind aside.
         if action == RepoAction::Read && !self.is_private() {
             return Ok(true);
         }
         let Some(user_id) = user_id else {
             return Ok(false);
         };
+
+        if let Some(organization_id) = self.organization_id {
+            // Org owners have every action. Plain membership grants nothing on
+            // its own — access comes from a team's grant on this repository.
+            if org_members::Entity::role_for(db, organization_id, user_id).await?
+                == Some(organizations::ROLE_OWNER.to_owned())
+            {
+                return Ok(true);
+            }
+            let team_ids =
+                team_members::Entity::team_ids_for_user(db, organization_id, user_id).await?;
+            let grants =
+                team_repositories::Entity::find_for_repository_and_teams(db, self.id, &team_ids)
+                    .await?;
+            if grants.iter().any(|grant| role_allows(&grant.role, action)) {
+                return Ok(true);
+            }
+        } else if self.user_id == user_id {
+            return Ok(true);
+        }
+
+        // Direct collaborator grants apply to both owner kinds.
         let collaborator = collaborators::Entity::find_for(db, self.id, user_id).await?;
         Ok(collaborator.is_some_and(|row| role_allows(&row.role, action)))
     }
@@ -198,14 +225,48 @@ impl Model {
         let Some(user_id) = user_id else {
             return Ok("none".to_owned());
         };
-        if self.is_owned_by(user_id) {
+        if let Some(organization_id) = self.organization_id {
+            if org_members::Entity::role_for(db, organization_id, user_id).await?
+                == Some(organizations::ROLE_OWNER.to_owned())
+            {
+                return Ok(ROLE_OWNER.to_owned());
+            }
+        } else if self.user_id == user_id {
             return Ok(ROLE_OWNER.to_owned());
         }
-        let role = collaborators::Entity::find_for(db, self.id, user_id)
+
+        // Highest grant wins across teams and direct collaborator rows.
+        let mut roles: Vec<String> = collaborators::Entity::find_for(db, self.id, user_id)
             .await?
             .map(|row| row.role)
-            .unwrap_or_else(|| "none".to_owned());
-        Ok(role)
+            .into_iter()
+            .collect();
+        if let Some(organization_id) = self.organization_id {
+            let team_ids =
+                team_members::Entity::team_ids_for_user(db, organization_id, user_id).await?;
+            roles.extend(
+                team_repositories::Entity::find_for_repository_and_teams(db, self.id, &team_ids)
+                    .await?
+                    .into_iter()
+                    .map(|grant| grant.role),
+            );
+        }
+        if roles
+            .iter()
+            .any(|role| role_allows(role, RepoAction::Admin))
+        {
+            return Ok(ROLE_ADMIN.to_owned());
+        }
+        if roles
+            .iter()
+            .any(|role| role_allows(role, RepoAction::Write))
+        {
+            return Ok(ROLE_WRITE.to_owned());
+        }
+        if roles.iter().any(|role| role_allows(role, RepoAction::Read)) {
+            return Ok(ROLE_READ.to_owned());
+        }
+        Ok("none".to_owned())
     }
 
     /// The repository name as stored, or an error if a legacy row has none.
@@ -257,13 +318,31 @@ impl Model {
         owner: &str,
         name: &str,
     ) -> ModelResult<Self> {
-        let user = users::Model::find_by_username(db, owner).await?;
-        Entity::find()
-            .filter(Column::UserId.eq(user.id))
-            .filter(Column::Name.eq(name))
-            .one(db)
-            .await?
-            .ok_or_else(|| ModelError::EntityNotFound)
+        // A handle belongs to either a user or an organization. Try both, and
+        // scope user-owned repos with `organization_id IS NULL` so a creator's
+        // personal repo cannot shadow an identically named org repo.
+        if let Ok(user) = users::Model::find_by_username(db, owner).await {
+            if let Some(repo) = Entity::find()
+                .filter(Column::UserId.eq(user.id))
+                .filter(Column::OrganizationId.is_null())
+                .filter(Column::Name.eq(name))
+                .one(db)
+                .await?
+            {
+                return Ok(repo);
+            }
+        }
+        if let Ok(org) = organizations::Entity::find_by_handle(db, owner).await {
+            if let Some(repo) = Entity::find()
+                .filter(Column::OrganizationId.eq(org.id))
+                .filter(Column::Name.eq(name))
+                .one(db)
+                .await?
+            {
+                return Ok(repo);
+            }
+        }
+        Err(ModelError::EntityNotFound)
     }
 }
 
@@ -286,6 +365,33 @@ impl ActiveModel {
             description: Set(description.map(str::to_owned)),
             is_private: Set(Some(is_private)),
             user_id: Set(user_id),
+            ..Default::default()
+        }
+        .insert(db)
+        .await
+        .map_err(Into::into)
+    }
+
+    /// Creates a repository owned by an organization. `user_id` records who
+    /// created it; only `organization_id` decides who has permission.
+    ///
+    /// # Errors
+    /// Returns a 400 for an invalid name, or a database error on insert.
+    pub async fn create_for_organization(
+        db: &DatabaseConnection,
+        organization_id: i64,
+        creator_id: i64,
+        name: &str,
+        description: Option<&str>,
+        is_private: bool,
+    ) -> Result<Model> {
+        validate_name(name)?;
+        ActiveModel {
+            name: Set(Some(name.to_owned())),
+            description: Set(description.map(str::to_owned)),
+            is_private: Set(Some(is_private)),
+            user_id: Set(creator_id),
+            organization_id: Set(Some(organization_id)),
             ..Default::default()
         }
         .insert(db)

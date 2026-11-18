@@ -15,6 +15,7 @@ pub struct Model {
     pub description: Option<String>,
     pub is_private: Option<bool>,
     pub user_id: i64,
+    pub organization_id: Option<i64>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -33,10 +34,20 @@ pub enum Relation {
     Issues,
     #[sea_orm(has_many = "super::labels::Entity")]
     Labels,
+    #[sea_orm(
+        belongs_to = "super::organizations::Entity",
+        from = "Column::OrganizationId",
+        to = "super::organizations::Column::Id",
+        on_update = "NoAction",
+        on_delete = "Cascade"
+    )]
+    Organizations,
     #[sea_orm(has_many = "super::pull_requests::Entity")]
     PullRequests,
     #[sea_orm(has_many = "super::stars::Entity")]
     Stars,
+    #[sea_orm(has_many = "super::team_repositories::Entity")]
+    TeamRepositories,
     #[sea_orm(
         belongs_to = "super::users::Entity",
         from = "Column::UserId",
@@ -91,6 +102,12 @@ impl Related<super::labels::Entity> for Entity {
     }
 }
 
+impl Related<super::organizations::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Organizations.def()
+    }
+}
+
 impl Related<super::pull_requests::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::PullRequests.def()
@@ -100,6 +117,12 @@ impl Related<super::pull_requests::Entity> for Entity {
 impl Related<super::stars::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Stars.def()
+    }
+}
+
+impl Related<super::team_repositories::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::TeamRepositories.def()
     }
 }
 

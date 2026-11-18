@@ -4,6 +4,7 @@ import { createAppStore } from './index'
 import { forkRequested } from './forksSlice'
 import { createRequested, listRequested } from './repositoriesSlice'
 import { issueRequested } from './issuesSlice'
+import { orgRequested } from './organizationsSlice'
 import { protectionRequested } from './protectionSlice'
 import { pullRequested } from './pullsSlice'
 import { socialRequested } from './socialSlice'
@@ -56,11 +57,13 @@ describe('repository sagas', () => {
 
     const store = createAppStore()
     store.dispatch(
-      createRequested({ name: 'new-repo', description: null, is_private: true }),
+      createRequested({ name: 'new-repo', description: null, is_private: true, organization: null }),
     )
 
     await vi.waitFor(() => expect(store.getState().repositories.items).toEqual([repo]))
-    expect(posts).toEqual([{ name: 'new-repo', description: null, is_private: true }])
+    expect(posts).toEqual([
+      { name: 'new-repo', description: null, is_private: true, organization: null },
+    ])
     expect(fetchMock.mock.calls.some((call) => call[1]?.method === 'GET')).toBe(true)
   })
 })
@@ -110,6 +113,38 @@ describe('fork sagas', () => {
     store.dispatch(forkRequested({ part: 'list', key: 'list', owner: 'alice', name: 'hello' }))
 
     await vi.waitFor(() => expect(store.getState().forks.forks).toEqual(forks))
+  })
+})
+
+describe('organization sagas', () => {
+  const org = {
+    id: 1,
+    handle: 'acme',
+    display_name: 'Acme Inc.',
+    description: null,
+    viewer_role: 'owner',
+  }
+
+  it('lists organizations and appends a newly created one', async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === 'POST') return jsonResponse(org)
+      return jsonResponse([org])
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = createAppStore()
+    store.dispatch(orgRequested({ part: 'list', key: 'list:orgs' }))
+    await vi.waitFor(() => expect(store.getState().organizations.orgs).toEqual([org]))
+
+    store.dispatch(
+      orgRequested({
+        part: 'create',
+        key: 'create:acme',
+        params: { handle: 'acme', display_name: 'Acme Inc.', description: null },
+      }),
+    )
+    await vi.waitFor(() => expect(store.getState().organizations.current?.handle).toBe('acme'))
+    expect(fetchMock.mock.calls.some((call) => call[1]?.method === 'POST')).toBe(true)
   })
 })
 

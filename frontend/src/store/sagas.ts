@@ -5,14 +5,19 @@ import { ApiClientError } from '../api/client'
 import { collaboratorsApi } from '../api/collaborators'
 import { forksApi } from '../api/forks'
 import { issuesApi } from '../api/issues'
+import { organizationsApi } from '../api/organizations'
 import { protectionApi } from '../api/protection'
 import { pullsApi } from '../api/pulls'
 import { repositoriesApi } from '../api/repositories'
 import { socialApi } from '../api/social'
 import { tokensApi } from '../api/tokens'
 import type { AddCommentParams } from '../bindings/AddCommentParams'
+import type { AddOrgMemberParams } from '../bindings/AddOrgMemberParams'
 import type { AddReviewCommentParams } from '../bindings/AddReviewCommentParams'
 import type { CreateIssueParams } from '../bindings/CreateIssueParams'
+import type { CreateOrganizationParams } from '../bindings/CreateOrganizationParams'
+import type { CreateTeamParams } from '../bindings/CreateTeamParams'
+import type { GrantTeamRepoParams } from '../bindings/GrantTeamRepoParams'
 import type { CreatePullRequestParams } from '../bindings/CreatePullRequestParams'
 import type { CreateLabelParams } from '../bindings/CreateLabelParams'
 import type { CreateRepoParams } from '../bindings/CreateRepoParams'
@@ -44,6 +49,12 @@ import {
   issueSucceeded,
   type IssueRequest,
 } from './issuesSlice'
+import {
+  orgFailed,
+  orgRequested,
+  orgSucceeded,
+  type OrgRequest,
+} from './organizationsSlice'
 import {
   protectionFailed,
   protectionRequested,
@@ -150,6 +161,115 @@ function* fetchFork(action: PayloadAction<ForkRequest>): SagaIterator {
     yield put(forkSucceeded({ part, key, data }))
   } catch (err) {
     yield put(forkFailed({ part, key, error: errorMessage(err) }))
+  }
+}
+
+function* fetchOrg(action: PayloadAction<OrgRequest>): SagaIterator {
+  const { part, key, handle = '', teamId = 0, userId = 0, repoId = 0, params } = action.payload
+  try {
+    let data: unknown
+    switch (part) {
+      case 'list':
+        data = yield call(organizationsApi.list)
+        break
+      case 'show':
+        data = yield call(organizationsApi.show, handle)
+        break
+      case 'create':
+        data = yield call(
+          organizationsApi.create,
+          params as CreateOrganizationParams,
+        )
+        break
+      case 'members':
+        data = yield call(organizationsApi.members, handle)
+        break
+      case 'addMember':
+        data = yield call(organizationsApi.addMember, handle, params as AddOrgMemberParams)
+        break
+      case 'removeMember':
+        yield call(organizationsApi.removeMember, handle, userId)
+        data = { user_id: userId }
+        break
+      case 'teams':
+        data = yield call(organizationsApi.teams, handle)
+        break
+      case 'createTeam':
+        data = yield call(organizationsApi.createTeam, handle, params as CreateTeamParams)
+        break
+      case 'teamMembers':
+        data = {
+          teamId,
+          items: yield call(organizationsApi.teamMembers, handle, teamId),
+        }
+        break
+      case 'addTeamMember': {
+        const member = yield call(
+          organizationsApi.addTeamMember,
+          handle,
+          teamId,
+          params as AddOrgMemberParams,
+        )
+        data = { ...member, team_id: teamId }
+        break
+      }
+      case 'removeTeamMember':
+        yield call(organizationsApi.removeTeamMember, handle, teamId, userId)
+        data = { teamId, userId }
+        break
+      case 'teamRepos':
+        data = {
+          teamId,
+          items: yield call(organizationsApi.teamRepos, handle, teamId),
+        }
+        break
+      case 'grantRepo':
+        data = yield call(
+          organizationsApi.grantRepo,
+          handle,
+          teamId,
+          params as GrantTeamRepoParams,
+        )
+        break
+      case 'revokeRepo':
+        yield call(organizationsApi.revokeRepo, handle, teamId, repoId)
+        data = { teamId, repoId }
+        break
+    }
+    yield put(orgSucceeded({ part, key, data }))
+
+    if (part === 'create') {
+      yield put(orgRequested({ part: 'list', key: 'list:orgs' }))
+    }
+    if (part === 'addMember' || part === 'removeMember') {
+      yield put(orgRequested({ part: 'members', key: `members:${handle}`, handle }))
+    }
+    if (part === 'createTeam') {
+      yield put(orgRequested({ part: 'teams', key: `teams:${handle}`, handle }))
+    }
+    if (part === 'addTeamMember' || part === 'removeTeamMember') {
+      yield put(
+        orgRequested({
+          part: 'teamMembers',
+          key: `team-members:${handle}:${teamId}`,
+          handle,
+          teamId,
+        }),
+      )
+      yield put(orgRequested({ part: 'teams', key: `teams:${handle}`, handle }))
+    }
+    if (part === 'grantRepo' || part === 'revokeRepo') {
+      yield put(
+        orgRequested({
+          part: 'teamRepos',
+          key: `team-repos:${handle}:${teamId}`,
+          handle,
+          teamId,
+        }),
+      )
+    }
+  } catch (err) {
+    yield put(orgFailed({ part, key, error: errorMessage(err) }))
   }
 }
 
@@ -491,6 +611,7 @@ export default function* rootSaga(): SagaIterator {
     // takeEvery (not takeLatest): several issue requests run in parallel and
     // stale responses are dropped by the key stored in issuesSlice.
     takeEvery(forkRequested.type, fetchFork),
+    takeEvery(orgRequested.type, fetchOrg),
     takeEvery(issueRequested.type, fetchIssue),
     takeEvery(pullRequested.type, fetchPull),
     takeEvery(collaboratorRequested.type, fetchCollaborator),

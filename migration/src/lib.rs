@@ -27,6 +27,12 @@ mod m20261118_011245_events;
 mod m20261118_013846_branch_protection_rules;
 mod m20261118_014015_pr_reviews;
 mod m20261118_015959_forks;
+mod m20261118_022339_organizations;
+mod m20261118_022423_org_members;
+mod m20261118_022507_teams;
+mod m20261118_022551_team_members;
+mod m20261118_022635_team_repositories;
+mod m20261118_022831_add_organization_to_repositories;
 pub struct Migrator;
 
 #[async_trait::async_trait]
@@ -52,6 +58,12 @@ impl MigratorTrait for Migrator {
             Box::new(m20261118_013846_branch_protection_rules::Migration),
             Box::new(m20261118_014015_pr_reviews::Migration),
             Box::new(m20261118_015959_forks::Migration),
+            Box::new(m20261118_022339_organizations::Migration),
+            Box::new(m20261118_022423_org_members::Migration),
+            Box::new(m20261118_022507_teams::Migration),
+            Box::new(m20261118_022551_team_members::Migration),
+            Box::new(m20261118_022635_team_repositories::Migration),
+            Box::new(m20261118_022831_add_organization_to_repositories::Migration),
             // inject-above (do not remove this comment)
         ]
     }

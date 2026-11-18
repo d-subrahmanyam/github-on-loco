@@ -8,6 +8,7 @@ pub mod collaborators;
 pub mod common;
 pub mod forks;
 pub mod issues;
+pub mod organizations;
 pub mod protection;
 pub mod pulls;
 pub mod repositories;

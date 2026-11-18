@@ -42,6 +42,9 @@ product:
 - stars, watches and an append-only activity log with an SPA feed
   (`models/stars.rs`, `models/watches.rs`, `models/events.rs`,
   `controllers/social.rs`);
+- organizations and teams: org-owned repositories, membership roles, teams and
+  per-team repo grants folded into the one `can()` rule
+  (`models/organizations.rs`, `models/team_*`, `controllers/organizations.rs`);
 - forks: a bare git copy plus a source/fork edge, with fork counts and a fork
   list (`models/forks.rs`, `controllers/forks.rs`);
 - branch protection rules and PR approvals: push blocks and required reviewers

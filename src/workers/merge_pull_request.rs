@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::data::{git::GitRepo, settings::AppSettings};
-use crate::models::{events, pull_requests, repositories, users};
+use crate::models::{events, organizations, pull_requests, repositories, users};
 
 pub struct Worker {
     pub ctx: AppContext,
@@ -50,17 +50,24 @@ impl BackgroundWorker<WorkerArgs> for Worker {
             .one(&self.ctx.db)
             .await?
             .ok_or_else(|| Error::string("repository no longer exists"))?;
-        let owner = users::Entity::find_by_id(repo.user_id)
-            .one(&self.ctx.db)
-            .await?
-            .ok_or_else(|| Error::string("repository owner no longer exists"))?;
+        // An org-owned repo lives under the org's handle, not the creator's.
+        let owner_handle = if let Some(org_id) = repo.organization_id {
+            organizations::Entity::find_by_id(org_id)
+                .one(&self.ctx.db)
+                .await?
+                .ok_or_else(|| Error::string("repository organization no longer exists"))?
+                .handle
+        } else {
+            users::Entity::find_by_id(repo.user_id)
+                .one(&self.ctx.db)
+                .await?
+                .ok_or_else(|| Error::string("repository owner no longer exists"))?
+                .owner_handle()
+                .to_owned()
+        };
 
         let settings = AppSettings::from_context(&self.ctx)?;
-        let git = GitRepo::open(
-            &settings.repo_base_dir,
-            owner.owner_handle(),
-            repo.display_name()?,
-        )?;
+        let git = GitRepo::open(&settings.repo_base_dir, &owner_handle, repo.display_name()?)?;
         let message = format!(
             "Merge pull request #{} from {} ({})",
             pr.number, pr.head_ref, pr.title

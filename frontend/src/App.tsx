@@ -5,6 +5,7 @@ import { clearToken, getTokenSnapshot, subscribeToken } from './auth/token'
 import { browseReset } from './store/browseSlice'
 import { useAppDispatch } from './store/hooks'
 import { issuesReset } from './store/issuesSlice'
+import { organizationsReset } from './store/organizationsSlice'
 import { collaboratorsReset } from './store/collaboratorsSlice'
 import { forksReset } from './store/forksSlice'
 import { protectionReset } from './store/protectionSlice'
@@ -27,6 +28,7 @@ export function App() {
     dispatch(browseReset())
     dispatch(resetRepositories())
     dispatch(issuesReset())
+    dispatch(organizationsReset())
     dispatch(pullsReset())
     dispatch(collaboratorsReset())
     dispatch(forksReset())
@@ -55,6 +57,11 @@ export function App() {
             {isAuthenticated && (
               <Link to="/dashboard" className="text-slate-300 hover:text-white">
                 Repositories
+              </Link>
+            )}
+            {isAuthenticated && (
+              <Link to="/organizations" className="text-slate-300 hover:text-white">
+                Organizations
               </Link>
             )}
             {isAuthenticated && (

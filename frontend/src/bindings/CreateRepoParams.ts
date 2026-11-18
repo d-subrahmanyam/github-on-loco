@@ -3,4 +3,8 @@
 /**
  * Body of `POST /api/repositories`.
  */
-export type CreateRepoParams = { name: string, description: string | null, is_private: boolean, };
+export type CreateRepoParams = { name: string, description: string | null, is_private: boolean, 
+/**
+ * Handle of an organization the caller owns; omit for a personal repo.
+ */
+organization: string | null, };

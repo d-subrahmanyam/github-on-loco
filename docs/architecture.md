@@ -126,6 +126,8 @@ storage — that is a Phase 5/6 concern, documented in [roadmap.md](roadmap.md).
 | Repo create atomicity | roll back the DB row on git failure | Keeps metadata and disk in step without a distributed transaction |
 | Authorization | `repositories::Model::can(user, action)` | One rule for REST, git transport and every feature; wrappers only add names for common actions |
 | Activity | append-only `events` log with small display payloads | Git and the domain tables stay authoritative; the feed can be stale without being wrong |
+| Repository ownership | `organization_id` is the single owner-kind switch | `user_id` stays as the creator for audit; every path, git-auth and `can()` decision reads `organization_id` so a personal repo cannot shadow an org repo with the same name |
+| Organizations | org owners manage; teams carry repository access | Plain membership is not a permission. The same `can()` method unions org ownership, team grants and direct collaborators, so git and REST cannot disagree |
 | Forks | a fork is a normal repository plus one edge row | No second repo abstraction: the same permissions, git transport and browsing code work on a fork. Cloning happens once at creation; the edge is metadata only |
 | Branch protection | rules live on the branch, enforcement lives at the two write boundaries | Pushes are rejected in `git_http` before `http-backend` runs; merges are checked in the endpoint. Admins stay exempt from push blocks, and PR merges write with git plumbing, so a protected branch is never unreachable |
 | Private repo browsing | enforced via `can(..., Read)` | 404 for viewers without a grant avoids leaking existence |

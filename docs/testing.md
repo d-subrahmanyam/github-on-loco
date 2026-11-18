@@ -66,6 +66,11 @@ for obtaining a JWT and building the `Authorization` header.
   request tests for toggle counts, `viewer_role`-free anonymous behaviour,
   private-repo visibility, and events produced by stars/watches/issues/PR
   merges. A unit test parses the branch out of a receive-pack pkt-line body.
+- **Organizations and teams**: model tests for the creator-not-owner rule, org
+  roles, team membership and grants, and the resulting `can()`/`role_for()`
+  answers; request tests for owner-only settings, creating a repo under an org,
+  a member gaining and losing git push access as a team grant is added/revoked,
+  and a personal repo with the same name not shadowing an org repo.
 - **Forks**: model tests for the source/fork edge and label lookup; request tests
   that a fork copies both branches of the bare repo, appears in the source's
   fork count/list and the fork's own overview, avoids name collisions, rejects
@@ -77,10 +82,10 @@ for obtaining a JWT and building the `Authorization` header.
   a writer but allowed through for the owner. The approval event shows up in the
   activity feed.
 - **Frontend**: Vitest + Testing Library (`pnpm test` in `frontend/`) cover the
-  repository/fork/issue/pull/collaborator/protection/social/token sagas against a mocked `fetch`
+  repository/fork/issue/organization/pull/collaborator/protection/social/token sagas against a mocked `fetch`
   (including stale-response protection), the password visibility toggle, token
   storage and logout routing, and rendering of the issue, PR, collaborator,
-  fork-list, branch-protection and activity pages. `pnpm build` still type-checks
+  fork-list, organization, branch-protection and activity pages. `pnpm build` still type-checks
   everything.
 - **Tasks**: user create/delete.
 

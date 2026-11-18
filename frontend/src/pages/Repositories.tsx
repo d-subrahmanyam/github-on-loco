@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
+import { orgRequested } from '../store/organizationsSlice'
 import {
   clearCreateError,
   createRequested,
@@ -19,15 +20,23 @@ export function Repositories() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [isPrivate, setIsPrivate] = useState(false)
+  const [orgHandle, setOrgHandle] = useState('')
+  const orgs = useAppSelector((state) => state.organizations.orgs)
 
   useEffect(() => {
     dispatch(listRequested())
+    dispatch(orgRequested({ part: 'list', key: 'list:orgs' }))
   }, [dispatch])
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     dispatch(
-      createRequested({ name, description: description || null, is_private: isPrivate }),
+      createRequested({
+        name,
+        description: description || null,
+        is_private: isPrivate,
+        organization: orgHandle || null,
+      }),
     )
     setName('')
     setDescription('')
@@ -79,6 +88,28 @@ export function Repositories() {
                 className={`${input} mt-1`}
               />
             </div>
+            {orgs.length > 0 && (
+              <div>
+                <label htmlFor="repo-owner" className={label}>
+                  Owner
+                </label>
+                <select
+                  id="repo-owner"
+                  value={orgHandle}
+                  onChange={(event) => setOrgHandle(event.target.value)}
+                  className={`${input} mt-1`}
+                >
+                  <option value="">Personal</option>
+                  {orgs
+                    .filter((org) => org.viewer_role === 'owner')
+                    .map((org) => (
+                      <option key={org.id} value={org.handle}>
+                        {org.display_name} (@{org.handle})
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
             <label htmlFor="repo-private" className="flex items-center gap-2 text-sm text-slate-700">
               <input
                 id="repo-private"

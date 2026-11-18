@@ -13,6 +13,8 @@ pub struct CreateRepoParams {
     pub name: String,
     pub description: Option<String>,
     pub is_private: bool,
+    /// Handle of an organization the caller owns; omit for a personal repo.
+    pub organization: Option<String>,
 }
 
 /// A repository as shown in lists and overview pages.

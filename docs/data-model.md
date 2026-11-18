@@ -26,6 +26,7 @@ uniqueness check and the insert share a transaction.
 | `name` | bare name, without `.git`; validated by `repositories::validate_name` |
 | `description` | optional |
 | `is_private` | missing values are treated as private (fail closed) |
+| `organization_id` → `organizations.id` (nullable) | when set, the **organization** owns the repo; `user_id` is only the creator |
 
 A repository's *contents* are not in this table — they are in the bare git
 repository at `<repo_base_dir>/<owner>/<name>.git`.
@@ -104,6 +105,25 @@ the viewer's own state. `events` is an append-only activity log — payloads hol
 small display hints (issue/PR number, branch, collaborator handle), never
 authoritative state. The SPA feed reads `events` newest first.
 
+### `organizations`, `org_members`, `teams`, `team_members`, `team_repositories` (Phase 4)
+
+| Table | Columns |
+|---|---|
+| `organizations` | `handle` (unique), `display_name`, `description` (nullable) |
+| `org_members` | `organization_id`, `user_id`, `role` (`owner`/`member`) — `unique(organization_id, user_id)` |
+| `teams` | `organization_id`, `name`, `description` (nullable) — `unique(organization_id, name)` |
+| `team_members` | `team_id`, `user_id` — `unique(team_id, user_id)` |
+| `team_repositories` | `team_id`, `repository_id`, `role` (`read`/`write`/`admin`) — `unique(team_id, repository_id)` |
+
+An organization is a second kind of repository owner, resolved by the same
+URL-safe handle rules as a username. Org owners may manage the org; plain
+membership grants nothing on repositories by itself. Access comes from a team
+that a member belongs to and that has a role on the repository. An org owner
+has every action; a user-owned repository still uses the creator + direct
+collaborator rules. Both go through the one `repositories::Model::can` method,
+and `role_for` reports the highest grant for the SPA. Removing a team member or
+revoking a grant takes effect immediately, including over git HTTP.
+
 ### `forks` (Phase 4)
 
 | Column | Notes |
@@ -154,7 +174,7 @@ watches                (existing)
 events                 (existing)   + actor via user_id
 forks                  (existing)
 branch_protection_rules (existing)
-organizations / org_members / teams        (Phase 4)
+organizations / org_members / teams        (existing)
 releases / tags                            (Phase 5)
 ```
 
