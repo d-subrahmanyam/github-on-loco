@@ -33,6 +33,7 @@ mod m20261118_022507_teams;
 mod m20261118_022551_team_members;
 mod m20261118_022635_team_repositories;
 mod m20261118_022831_add_organization_to_repositories;
+mod m20261118_140850_releases;
 pub struct Migrator;
 
 #[async_trait::async_trait]
@@ -64,6 +65,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20261118_022551_team_members::Migration),
             Box::new(m20261118_022635_team_repositories::Migration),
             Box::new(m20261118_022831_add_organization_to_repositories::Migration),
+            Box::new(m20261118_140850_releases::Migration),
             // inject-above (do not remove this comment)
         ]
     }

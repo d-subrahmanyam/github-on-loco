@@ -8,6 +8,7 @@ mod organizations;
 mod prepare_data;
 mod protection;
 mod pulls;
+mod releases;
 mod repositories;
 mod social;
 mod support;

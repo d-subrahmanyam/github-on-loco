@@ -2,6 +2,7 @@ import { FaCodeFork } from 'react-icons/fa6'
 import {
   FaCode,
   FaCodeBranch,
+  FaRocket,
   FaCopy,
   FaExclamationCircle,
   FaEye,
@@ -215,6 +216,9 @@ export function RepoLayout() {
           </NavLink>
           <NavLink to="forks" className={tabClass}>
             <FaCodeFork /> Forks
+          </NavLink>
+          <NavLink to="releases" className={tabClass}>
+            <FaRocket /> Releases
           </NavLink>
           <NavLink to="activity" className={tabClass}>
             <FaHistory /> Activity

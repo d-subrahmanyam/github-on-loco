@@ -31,6 +31,7 @@ mod events;
 mod branch_protection_rules;
 
 mod pr_reviews;
+mod releases;
 
 mod forks;
 

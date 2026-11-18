@@ -37,6 +37,10 @@ end-to-end slice of that product.
 - **Organizations and teams** — repositories can be owned by an organization.
   Owners manage teams, and a team's per-repo role feeds the same authorization
   rule used by REST and git push.
+- **Releases and tags** — publish a release from a branch or commit; the git tag
+  is created with a compare-and-swap, notes live in Postgres, and each release
+  offers a `.tar.gz` source archive. Loose tags can be managed from the Releases
+  tab.
 - **Forks** — fork any repository you can read; the fork is a full bare git copy
   with its own permissions, plus fork counts and a fork network view.
 - **Branch protection** — per-branch rules that block direct pushes to writers
@@ -113,6 +117,7 @@ The development config uses a clearly-labelled dev-only base64 value.
 | Repositories | `GET/POST /api/repositories` |
 | Browse | `/api/repos/{owner}/{repo}` (`/branches`, `/commits`, `/commit/{sha}`, `/tree`, `/raw`) |
 | Git | `/{owner}/{repo}/info/refs`, `/git-upload-pack`, `/git-receive-pack` |
+| Releases | `/api/repos/{owner}/{repo}/releases` (`/latest`, `/{id}`), `/tags`, `/archive/{ref}.tar.gz` |
 
 Run `cargo loco routes` to see the live, complete route table.
 

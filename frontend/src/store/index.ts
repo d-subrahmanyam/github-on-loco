@@ -7,6 +7,7 @@ import issuesReducer from './issuesSlice'
 import organizationsReducer from './organizationsSlice'
 import protectionReducer from './protectionSlice'
 import pullsReducer from './pullsSlice'
+import releasesReducer from './releasesSlice'
 import repositoriesReducer from './repositoriesSlice'
 import rootSaga from './sagas'
 import socialReducer from './socialSlice'
@@ -25,6 +26,7 @@ export function createAppStore() {
       issues: issuesReducer,
       organizations: organizationsReducer,
       pulls: pullsReducer,
+      releases: releasesReducer,
       protection: protectionReducer,
       tokens: tokensReducer,
     },

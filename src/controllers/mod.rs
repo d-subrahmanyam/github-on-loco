@@ -15,6 +15,7 @@ pub mod issues;
 pub mod organizations;
 pub mod protection;
 pub mod pulls;
+pub mod releases;
 pub mod social;
 
 pub mod tokens;

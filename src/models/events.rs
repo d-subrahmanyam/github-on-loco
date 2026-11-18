@@ -26,6 +26,10 @@ pub mod kind {
     pub const COLLABORATOR_ADDED: &str = "collaborator.added";
     pub const COLLABORATOR_REMOVED: &str = "collaborator.removed";
     pub const PUSH: &str = "push";
+    pub const RELEASE_PUBLISHED: &str = "release.published";
+    pub const RELEASE_UPDATED: &str = "release.updated";
+    pub const RELEASE_DELETED: &str = "release.deleted";
+    pub const TAG_DELETED: &str = "tag.deleted";
 }
 
 impl Entity {

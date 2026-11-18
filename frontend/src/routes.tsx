@@ -18,6 +18,7 @@ import { PullDetail } from './pages/PullDetail'
 import { PullList } from './pages/PullList'
 import { RepoActivity } from './pages/RepoActivity'
 import { Repositories } from './pages/Repositories'
+import { Releases } from './pages/Releases'
 import { RepoCode } from './pages/RepoCode'
 import { Tokens } from './pages/Tokens'
 import { RepoLayout } from './pages/RepoLayout'
@@ -54,6 +55,7 @@ export const router = createBrowserRouter([
           { path: 'pulls', element: <PullList /> },
           { path: 'pulls/:number', element: <PullDetail /> },
           { path: 'forks', element: <Forks /> },
+          { path: 'releases', element: <Releases /> },
           { path: 'collaborators', element: <Collaborators /> },
           { path: 'branch-protection', element: <BranchProtection /> },
           { path: 'activity', element: <RepoActivity /> },

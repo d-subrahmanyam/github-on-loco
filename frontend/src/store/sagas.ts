@@ -8,6 +8,7 @@ import { issuesApi } from '../api/issues'
 import { organizationsApi } from '../api/organizations'
 import { protectionApi } from '../api/protection'
 import { pullsApi } from '../api/pulls'
+import { releasesApi } from '../api/releases'
 import { repositoriesApi } from '../api/repositories'
 import { socialApi } from '../api/social'
 import { tokensApi } from '../api/tokens'
@@ -19,12 +20,14 @@ import type { CreateOrganizationParams } from '../bindings/CreateOrganizationPar
 import type { CreateTeamParams } from '../bindings/CreateTeamParams'
 import type { GrantTeamRepoParams } from '../bindings/GrantTeamRepoParams'
 import type { CreatePullRequestParams } from '../bindings/CreatePullRequestParams'
+import type { CreateReleaseParams } from '../bindings/CreateReleaseParams'
 import type { CreateLabelParams } from '../bindings/CreateLabelParams'
 import type { CreateRepoParams } from '../bindings/CreateRepoParams'
 import type { CreateTokenParams } from '../bindings/CreateTokenParams'
 import type { RepoResponse } from '../bindings/RepoResponse'
 import type { SetBranchProtectionParams } from '../bindings/SetBranchProtectionParams'
 import type { SetReviewParams } from '../bindings/SetReviewParams'
+import type { UpdateReleaseParams } from '../bindings/UpdateReleaseParams'
 import {
   browseFailed,
   browseRequested,
@@ -67,6 +70,12 @@ import {
   pullSucceeded,
   type PullRequest as PullRequestAction,
 } from './pullsSlice'
+import {
+  releaseFailed,
+  releaseRequested,
+  releaseSucceeded,
+  type ReleaseRequest,
+} from './releasesSlice'
 import {
   socialFailed,
   socialRequested,
@@ -161,6 +170,60 @@ function* fetchFork(action: PayloadAction<ForkRequest>): SagaIterator {
     yield put(forkSucceeded({ part, key, data }))
   } catch (err) {
     yield put(forkFailed({ part, key, error: errorMessage(err) }))
+  }
+}
+
+function* fetchRelease(action: PayloadAction<ReleaseRequest>): SagaIterator {
+  const { part, key, owner, name, id = 0, tag = '', params } = action.payload
+  try {
+    let data: unknown
+    switch (part) {
+      case 'list':
+        data = yield call(releasesApi.list, owner, name)
+        break
+      case 'show':
+        data = yield call(releasesApi.show, owner, name, id)
+        break
+      case 'create':
+        data = yield call(releasesApi.create, owner, name, params as CreateReleaseParams)
+        break
+      case 'update':
+        data = yield call(releasesApi.update, owner, name, id, params as UpdateReleaseParams)
+        break
+      case 'remove':
+        yield call(releasesApi.remove, owner, name, id)
+        data = id
+        break
+      case 'tags':
+        data = yield call(releasesApi.tags, owner, name)
+        break
+      case 'removeTag':
+        yield call(releasesApi.removeTag, owner, name, tag)
+        data = tag
+        break
+    }
+    yield put(releaseSucceeded({ part, key, data }))
+
+    if (part === 'create' || part === 'update' || part === 'remove' || part === 'removeTag') {
+      yield put(
+        releaseRequested({
+          part: 'list',
+          key: `releases:${owner}/${name}`,
+          owner,
+          name,
+        }),
+      )
+      yield put(
+        releaseRequested({
+          part: 'tags',
+          key: `tags:${owner}/${name}`,
+          owner,
+          name,
+        }),
+      )
+    }
+  } catch (err) {
+    yield put(releaseFailed({ part, key, error: errorMessage(err) }))
   }
 }
 
@@ -611,6 +674,7 @@ export default function* rootSaga(): SagaIterator {
     // takeEvery (not takeLatest): several issue requests run in parallel and
     // stale responses are dropped by the key stored in issuesSlice.
     takeEvery(forkRequested.type, fetchFork),
+    takeEvery(releaseRequested.type, fetchRelease),
     takeEvery(orgRequested.type, fetchOrg),
     takeEvery(issueRequested.type, fetchIssue),
     takeEvery(pullRequested.type, fetchPull),

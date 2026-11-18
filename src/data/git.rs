@@ -6,10 +6,12 @@
 //! purpose. Keeping it behind [`GitRepo`] means a future switch to `git2` is a
 //! single-file change.
 //!
-//! Git remains the source of truth for repository contents. Nothing here writes
-//! to a repository.
+//! Git remains the source of truth for repository contents. Most of this
+//! module is read-only; [`GitRepo::merge`], the tag methods and
+//! [`GitRepo::archive`] are the deliberate write/export exceptions.
 
 use crate::dtos::pulls::{CompareResult, DiffFile};
+use crate::dtos::releases::TagResponse;
 use crate::dtos::repositories::{Branch, Commit, CommitDetail, TreeEntry};
 use crate::models::repositories;
 use loco_rs::prelude::*;
@@ -31,6 +33,28 @@ pub fn is_safe_ref(reference: &str) -> bool {
         && reference.chars().all(|c| {
             c.is_ascii_alphanumeric() || matches!(c, '/' | '_' | '-' | '.' | '+' | '^' | '~')
         })
+}
+
+/// Whether a string is safe to use as a git tag ref component.
+///
+/// Rejects the characters and sequences git forbids in ref names, plus option
+/// injection and anything that could escape `refs/tags/`.
+#[must_use]
+pub fn is_safe_tag(tag: &str) -> bool {
+    !tag.is_empty()
+        && !tag.starts_with('-')
+        && !tag.starts_with('/')
+        && !tag.ends_with('/')
+        && !tag.ends_with(".lock")
+        && !tag.contains("..")
+        && !tag.contains("//")
+        && !tag.contains("@{")
+        && !tag.contains(' ')
+        && !tag.contains('\0')
+        && !tag.contains(['~', '^', ':', '?', '*', '[', '\\'])
+        && tag
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '/' | '_' | '-' | '.' | '+'))
 }
 
 /// A path inside a tree that is safe to append to `<rev>:<path>`.
@@ -169,6 +193,92 @@ impl GitRepo {
                 })
             })
             .collect())
+    }
+
+    /// Lists all tags, oldest first, with the commit each one points at.
+    ///
+    /// # Errors
+    /// Returns an error if git cannot be run.
+    pub async fn tags(&self) -> Result<Vec<TagResponse>> {
+        let out = self
+            .git(&[
+                "for-each-ref",
+                "--sort=creatordate",
+                "--format=%(refname:short)%09%(objectname)%09%(creatordate:iso-strict)",
+                "refs/tags",
+            ])
+            .await?;
+        Ok(String::from_utf8_lossy(&out)
+            .lines()
+            .filter_map(|line| {
+                let mut parts = line.split('\t');
+                Some(TagResponse {
+                    name: parts.next()?.to_owned(),
+                    sha: parts.next()?.trim().to_owned(),
+                    created_at: parts.next().unwrap_or("").trim().to_owned(),
+                })
+            })
+            .collect())
+    }
+
+    /// Creates a lightweight tag at `target` (a branch name or commit SHA).
+    ///
+    /// The all-zero old value is a compare-and-swap: the command fails if the
+    /// tag already exists, so a release can never silently move a published tag.
+    ///
+    /// # Errors
+    /// Returns a 400 for an unsafe name/target, or a git error (including a
+    /// duplicate tag).
+    pub async fn create_tag(&self, tag: &str, target: &str) -> Result<String> {
+        if !is_safe_tag(tag) {
+            return bad_request("invalid tag name");
+        }
+        if !is_safe_ref(target) {
+            return bad_request("invalid release target");
+        }
+        let sha = self.resolve(target).await?;
+        let reference = format!("refs/tags/{tag}");
+        if self
+            .git_output(&["show-ref", "--verify", "--quiet", &reference])
+            .await?
+            .status
+            .success()
+        {
+            return bad_request("a tag with that name already exists");
+        }
+        let zero = "0".repeat(40);
+        let output = self
+            .git_output(&["update-ref", &reference, &sha, &zero])
+            .await?;
+        if !output.status.success() {
+            // The compare-and-swap lost a race with a concurrent tag creation.
+            return bad_request("a tag with that name already exists");
+        }
+        Ok(sha)
+    }
+
+    /// Deletes a tag from the bare repository.
+    ///
+    /// # Errors
+    /// Returns a 400 for an unsafe name, or a git error.
+    pub async fn delete_tag(&self, tag: &str) -> Result<()> {
+        if !is_safe_tag(tag) {
+            return bad_request("invalid tag name");
+        }
+        let reference = format!("refs/tags/{tag}");
+        self.git(&["update-ref", "-d", &reference]).await?;
+        Ok(())
+    }
+
+    /// Exports a tar.gz archive of `reference`.
+    ///
+    /// # Errors
+    /// Returns a 400 for an unsafe revision, or a git error.
+    pub async fn archive(&self, reference: &str) -> Result<Vec<u8>> {
+        if !is_safe_ref(reference) {
+            return bad_request("invalid revision");
+        }
+        self.git(&["archive", "--format=tar.gz", reference]).await
     }
 
     /// Lists up to `limit` commits reachable from `reference`.
@@ -591,6 +701,37 @@ mod tests {
         assert!(clear_repo_storage("").await.is_err());
         assert!(clear_repo_storage("relative/path").await.is_err());
         assert!(clear_repo_storage("/").await.is_err());
+    }
+
+    #[test]
+    fn safe_tag_names_are_accepted() {
+        for tag in ["v1.0.0", "release-2026", "feature/x", "v1+build", "rc.1"] {
+            assert!(is_safe_tag(tag), "expected {tag:?} to be accepted");
+        }
+    }
+
+    #[test]
+    fn unsafe_tag_names_are_rejected() {
+        for tag in [
+            "",
+            "-release",
+            "a..b",
+            "a//b",
+            "/leading",
+            "trailing/",
+            "a b",
+            "x.lock",
+            "a~1",
+            "a^b",
+            "a:b",
+            "a?b",
+            "a[b",
+            "a\\b",
+            "a@{1}",
+            "a\0b",
+        ] {
+            assert!(!is_safe_tag(tag), "expected {tag:?} to be rejected");
+        }
     }
 
     #[test]

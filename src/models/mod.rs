@@ -20,6 +20,7 @@ pub mod organizations;
 pub mod personal_access_tokens;
 pub mod pr_reviews;
 pub mod pull_requests;
+pub mod releases;
 pub mod repositories;
 pub mod review_comments;
 pub mod stars;

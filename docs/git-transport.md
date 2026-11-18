@@ -113,6 +113,16 @@ repository, so it never passes through the HTTP push path. A branch with
 `required_approvals` also gates merges in the REST endpoint — see
 [data-model.md](data-model.md).
 
+## Tags and archives
+
+Releases create lightweight tags through `GitRepo::create_tag` (`git update-ref
+refs/tags/<tag> <sha> 0000…`). The all-zero old value is a compare-and-swap, so a
+tag that already exists is rejected with `400` rather than moved. Deleting a
+release removes its tag, and loose tags can be deleted from the Releases tab.
+`GET /api/repos/{owner}/{repo}/archive/{ref}.tar.gz` streams `git archive` output
+with `application/gzip`; the whole filename is one path segment because Loco's
+router does not allow a literal suffix after a path parameter.
+
 ## Known gaps
 
 - The clone URL is built from `ctx.config.server.full_url()`; behind a proxy,

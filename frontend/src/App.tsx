@@ -9,6 +9,7 @@ import { organizationsReset } from './store/organizationsSlice'
 import { collaboratorsReset } from './store/collaboratorsSlice'
 import { forksReset } from './store/forksSlice'
 import { protectionReset } from './store/protectionSlice'
+import { releasesReset } from './store/releasesSlice'
 import { socialReset } from './store/socialSlice'
 import { pullsReset } from './store/pullsSlice'
 import { reset as resetRepositories } from './store/repositoriesSlice'
@@ -32,6 +33,7 @@ export function App() {
     dispatch(pullsReset())
     dispatch(collaboratorsReset())
     dispatch(forksReset())
+    dispatch(releasesReset())
     dispatch(protectionReset())
     dispatch(socialReset())
     dispatch(tokensReset())

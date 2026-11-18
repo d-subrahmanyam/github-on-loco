@@ -87,7 +87,10 @@ Status legend: ✅ done · 🟡 partial · ⬜ planned.
 
 ## Phase 5 — Polish and scale ⬜
 
-- Releases/tags, search, notification emails via the mailer + queue, webhooks.
+- [x] Releases and tags: release metadata in Postgres, compare-and-swap git tags,
+      `latest` release lookup, loose-tag management, source archives and an SPA
+      Releases tab.
+- Remaining: search, notification emails via the mailer + queue, webhooks.
 - Deployment and scaling design is recorded in
   [docs/deployment-architecture.md](deployment-architecture.md): shared git
   storage and split web/worker deploys first, then a modular-monolith boundary

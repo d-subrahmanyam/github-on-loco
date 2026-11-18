@@ -71,6 +71,12 @@ for obtaining a JWT and building the `Authorization` header.
   answers; request tests for owner-only settings, creating a repo under an org,
   a member gaining and losing git push access as a team grant is added/revoked,
   and a personal repo with the same name not shadowing an org repo.
+- **Releases and tags**: model tests for per-repo tag uniqueness, prerelease
+  exclusion from `latest`, edits and validation; request tests that publishing
+  creates and deleting removes the git tag, that duplicate tags and unsafe names
+  are rejected, that `git archive` returns gzip bytes, and that private repos
+  and non-writers get 404. Frontend tests cover the release saga and the Releases
+  page's tag/archive links.
 - **Forks**: model tests for the source/fork edge and label lookup; request tests
   that a fork copies both branches of the bare repo, appears in the source's
   fork count/list and the fork's own overview, avoids name collisions, rejects

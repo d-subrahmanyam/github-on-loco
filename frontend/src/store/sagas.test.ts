@@ -7,6 +7,7 @@ import { issueRequested } from './issuesSlice'
 import { orgRequested } from './organizationsSlice'
 import { protectionRequested } from './protectionSlice'
 import { pullRequested } from './pullsSlice'
+import { releaseRequested } from './releasesSlice'
 import { socialRequested } from './socialSlice'
 import { tokenRequested } from './tokensSlice'
 import { jsonResponse } from '../test/helpers'
@@ -65,6 +66,53 @@ describe('repository sagas', () => {
       { name: 'new-repo', description: null, is_private: true, organization: null },
     ])
     expect(fetchMock.mock.calls.some((call) => call[1]?.method === 'GET')).toBe(true)
+  })
+})
+
+describe('release sagas', () => {
+  const release = {
+    id: 1,
+    tag_name: 'v1.0.0',
+    title: 'Version 1.0.0',
+    body: 'notes',
+    author: 'alice',
+    is_prerelease: false,
+    published_at: '2026-01-01T00:00:00Z',
+    commit_sha: 'abcdef1234567890',
+  }
+  const tag = { name: 'v1.0.0', sha: 'abcdef1234567890', created_at: '2026-01-01T00:00:00Z' }
+
+  it('lists releases and tags, then refreshes both after publishing', async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === 'POST') return jsonResponse(release)
+      const url = String(_input)
+      return jsonResponse(url.endsWith('/tags') ? [tag] : [release])
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = createAppStore()
+    const request = { owner: 'alice', name: 'hello' }
+    store.dispatch(releaseRequested({ part: 'list', key: 'releases:alice/hello', ...request }))
+    store.dispatch(releaseRequested({ part: 'tags', key: 'tags:alice/hello', ...request }))
+    await vi.waitFor(() => expect(store.getState().releases.releases).toEqual([release]))
+    expect(store.getState().releases.tags).toEqual([tag])
+
+    store.dispatch(
+      releaseRequested({
+        part: 'create',
+        key: 'create:v1',
+        ...request,
+        params: {
+          tag_name: 'v1.0.0',
+          target: 'main',
+          title: 'Version 1.0.0',
+          body: 'notes',
+          is_prerelease: false,
+        },
+      }),
+    )
+    await vi.waitFor(() => expect(store.getState().releases.current?.id).toBe(1))
+    expect(fetchMock.mock.calls.some((call) => call[1]?.method === 'POST')).toBe(true)
   })
 })
 

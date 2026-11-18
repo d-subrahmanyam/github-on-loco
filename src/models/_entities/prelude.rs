@@ -15,6 +15,7 @@ pub use super::organizations::Entity as Organizations;
 pub use super::personal_access_tokens::Entity as PersonalAccessTokens;
 pub use super::pr_reviews::Entity as PrReviews;
 pub use super::pull_requests::Entity as PullRequests;
+pub use super::releases::Entity as Releases;
 pub use super::repositories::Entity as Repositories;
 pub use super::review_comments::Entity as ReviewComments;
 pub use super::stars::Entity as Stars;

@@ -47,6 +47,9 @@ product:
 - organizations and teams: org-owned repositories, membership roles, teams and
   per-team repo grants folded into the one `can()` rule
   (`models/organizations.rs`, `models/team_*`, `controllers/organizations.rs`);
+- releases and tags: release metadata in Postgres, lightweight git tags created
+  with a compare-and-swap, a Releases tab with source archives and loose-tag
+  management (`models/releases.rs`, `controllers/releases.rs`, `data/git.rs`);
 - forks: a bare git copy plus a source/fork edge, with fork counts and a fork
   list (`models/forks.rs`, `controllers/forks.rs`);
 - branch protection rules and PR approvals: push blocks and required reviewers

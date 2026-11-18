@@ -46,6 +46,8 @@ pub enum Relation {
     PrReviews,
     #[sea_orm(has_many = "super::pull_requests::Entity")]
     PullRequests,
+    #[sea_orm(has_many = "super::releases::Entity")]
+    Releases,
     #[sea_orm(has_many = "super::repositories::Entity")]
     Repositories,
     #[sea_orm(has_many = "super::review_comments::Entity")]
@@ -103,6 +105,12 @@ impl Related<super::pr_reviews::Entity> for Entity {
 impl Related<super::pull_requests::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::PullRequests.def()
+    }
+}
+
+impl Related<super::releases::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Releases.def()
     }
 }
 

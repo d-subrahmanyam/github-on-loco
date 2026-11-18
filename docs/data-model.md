@@ -138,6 +138,29 @@ not duplicated. Fork names default to the source name and get a `-fork-N` suffix
 when the caller already owns that name. Forking requires read access, so public
 repos can be forked by any signed-in user while private ones need a grant.
 
+### `releases` (Phase 5)
+
+| Column | Notes |
+|---|---|
+| `id`, `created_at`, `updated_at` | standard |
+| `repository_id` → `repositories.id` | the repository the release belongs to |
+| `tag_name` | git tag name — `unique(repository_id, tag_name)` |
+| `title`, `body` (nullable) | human-facing release notes |
+| `author_id` → `users.id` | the publisher |
+| `is_prerelease` | hides the release from the `latest` shortcut |
+| `published_at` | set on creation; releases are always published (no drafts) |
+
+Git is authoritative for the tag itself: `src/data/git.rs` creates a lightweight
+tag at the requested branch or commit with a compare-and-swap (`update-ref ...
+0000…`), so a published tag can never be silently moved. This table only holds
+metadata, and the commit SHA in the response is resolved from git at read time.
+Creating a release requires `Write` and records a `release.published` event;
+editing/removing the notes and removing the tag are separate operations. Deleting
+a release removes both the row and the tag in that order — if the git step fails,
+the orphan tag can still be deleted from the Tags list. Tags without a release
+can be created directly in git and deleted through the API. Source archives are
+streamed from `git archive`, not stored.
+
 ### `branch_protection_rules`, `pr_reviews` (Phase 4)
 
 | Table | Columns |
@@ -175,7 +198,7 @@ events                 (existing)   + actor via user_id
 forks                  (existing)
 branch_protection_rules (existing)
 organizations / org_members / teams        (existing)
-releases / tags                            (Phase 5)
+releases                                   (existing)
 ```
 
 ### Rules for this model
