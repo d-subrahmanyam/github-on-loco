@@ -76,6 +76,21 @@ other users are checked against their `collaborators` row:
 Because the git and REST paths share the rule, granting or revoking a
 collaborator takes effect immediately on both sides.
 
+## Branch protection
+
+Before `git http-backend` runs, the push handler parses the target branch from
+the first receive-pack pkt-line (`refs/heads/<branch>`). If a
+`branch_protection_rules` row with `require_pull_request` exists for that branch
+and the pusher is **not** an admin (owner or `admin` collaborator), the push is
+rejected with `403` and a "merge through a pull request" message. Admins stay
+exempt by default, matching GitHub; removing the rule restores direct pushes.
+
+Pull request merges are not blocked by this check: the merge worker updates the
+branch with git plumbing (`commit-tree` → guarded `update-ref`) inside the bare
+repository, so it never passes through the HTTP push path. A branch with
+`required_approvals` also gates merges in the REST endpoint — see
+[data-model.md](data-model.md).
+
 ## Known gaps
 
 - The clone URL is built from `ctx.config.server.full_url()`; behind a proxy,

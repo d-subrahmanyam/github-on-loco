@@ -50,7 +50,7 @@ Status legend: ✅ done · 🟡 partial · ⬜ planned.
       be overwritten. Conflicts leave the PR open.
 - [x] SPA pull request list, new-PR form, detail with compare/diff and comments,
       close/reopen and merge controls.
-- Remaining: branch protection rules (builds on the Phase 4 roles).
+- Branch protection rules were implemented in Phase 4 and gate PR merges here.
 
 ## Phase 4 — Collaboration and permissions 🟡
 
@@ -70,7 +70,11 @@ Status legend: ✅ done · 🟡 partial · ⬜ planned.
       repository overview, and buttons in the repo header.
 - [x] Append-only `events` log with an SPA activity feed. Issue/PR actions,
       collaborator changes, star/watch toggles and pushes all record events.
-- Remaining: organizations, teams, forks, and branch protection rules.
+- [x] Branch protection rules per branch: block direct pushes (admins exempt)
+      and require a configurable number of non-author approvals before merge.
+      Reviews are upserted per reviewer; the PR DTO carries merge readiness so
+      the SPA and the authoritative merge check agree.
+- Remaining: organizations, teams, and forks.
 
 ## Phase 5 — Polish and scale ⬜
 

@@ -75,12 +75,18 @@ Submit the form and you'll land on the PR detail page.
 
 The detail page has two tabs:
 
-- **Conversation** — general or file/line-anchored review comments.
+- **Conversation** — reviewers' verdicts (approve / request changes / comment
+  only) followed by general or file/line-anchored review comments.
 - **Commits & files** — the comparison: commits ahead/behind the base, and one
   expandable panel per changed file with additions, deletions and the patch.
 
 The diff is a three-dot comparison from the merge base, so it shows what your
 branch actually introduces rather than the raw difference between the two tips.
+
+If the base branch is protected, the page shows the required approval count and
+the merge button stays disabled until enough reviewers have approved. An admin
+can change these rules on the repository's **Branch protection** tab; you cannot
+approve your own PR.
 
 When you're happy, use **Merge pull request**. The endpoint hands the work to a
 background worker; on success the PR becomes `merged`, the resulting commit SHA

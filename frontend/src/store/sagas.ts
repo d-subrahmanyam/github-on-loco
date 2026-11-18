@@ -4,6 +4,7 @@ import type { SagaIterator } from 'redux-saga'
 import { ApiClientError } from '../api/client'
 import { collaboratorsApi } from '../api/collaborators'
 import { issuesApi } from '../api/issues'
+import { protectionApi } from '../api/protection'
 import { pullsApi } from '../api/pulls'
 import { repositoriesApi } from '../api/repositories'
 import { socialApi } from '../api/social'
@@ -16,6 +17,8 @@ import type { CreateLabelParams } from '../bindings/CreateLabelParams'
 import type { CreateRepoParams } from '../bindings/CreateRepoParams'
 import type { CreateTokenParams } from '../bindings/CreateTokenParams'
 import type { RepoResponse } from '../bindings/RepoResponse'
+import type { SetBranchProtectionParams } from '../bindings/SetBranchProtectionParams'
+import type { SetReviewParams } from '../bindings/SetReviewParams'
 import {
   browseFailed,
   browseRequested,
@@ -34,6 +37,12 @@ import {
   issueSucceeded,
   type IssueRequest,
 } from './issuesSlice'
+import {
+  protectionFailed,
+  protectionRequested,
+  protectionSucceeded,
+  type ProtectionRequest,
+} from './protectionSlice'
 import {
   pullFailed,
   pullRequested,
@@ -289,6 +298,75 @@ function* fetchPull(action: PayloadAction<PullRequestAction>): SagaIterator {
   }
 }
 
+function* fetchProtection(action: PayloadAction<ProtectionRequest>): SagaIterator {
+  const { part, key, owner, name, number = 0, branch = '', params } = action.payload
+  try {
+    let data: unknown
+    switch (part) {
+      case 'list':
+        data = yield call(protectionApi.list, owner, name)
+        break
+      case 'set':
+        data = yield call(
+          protectionApi.set,
+          owner,
+          name,
+          params as SetBranchProtectionParams,
+        )
+        break
+      case 'remove':
+        yield call(protectionApi.remove, owner, name, branch)
+        // DELETE has no body; hand the slice the branch it needs to prune.
+        data = { branch }
+        break
+      case 'reviews':
+        data = yield call(protectionApi.reviews, owner, name, number)
+        break
+      case 'review':
+        data = yield call(
+          protectionApi.review,
+          owner,
+          name,
+          number,
+          params as SetReviewParams,
+        )
+        break
+    }
+    yield put(protectionSucceeded({ part, key, data }))
+
+    const scope = `${owner}/${name}`
+    if (part === 'set' || part === 'remove') {
+      yield put(
+        protectionRequested({ part: 'list', key: `list:${scope}`, owner, name }),
+      )
+    }
+    if (part === 'review') {
+      // Reviews are upserted, so reload the whole list and the PR's approval
+      // count from the server rather than guessing locally.
+      yield put(
+        protectionRequested({
+          part: 'reviews',
+          key: `reviews:${scope}:${number}`,
+          owner,
+          name,
+          number,
+        }),
+      )
+      yield put(
+        pullRequested({
+          part: 'detail',
+          key: `detail:${scope}:${number}`,
+          owner,
+          name,
+          number,
+        }),
+      )
+    }
+  } catch (err) {
+    yield put(protectionFailed({ part, key, error: errorMessage(err) }))
+  }
+}
+
 function* fetchCollaborator(action: PayloadAction<CollaboratorRequest>): SagaIterator {
   const { part, key, owner, name, username, role, userId } = action.payload
   try {
@@ -388,6 +466,7 @@ export default function* rootSaga(): SagaIterator {
     takeEvery(issueRequested.type, fetchIssue),
     takeEvery(pullRequested.type, fetchPull),
     takeEvery(collaboratorRequested.type, fetchCollaborator),
+    takeEvery(protectionRequested.type, fetchProtection),
     takeEvery(socialRequested.type, fetchSocial),
     takeEvery(tokenRequested.type, fetchToken),
   ])

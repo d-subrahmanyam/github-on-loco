@@ -14,7 +14,10 @@ use crate::dtos::pulls::{
     AddReviewCommentParams, CompareResult, CreatePullRequestParams, PullRequestResponse,
     ReviewCommentResponse,
 };
-use crate::models::{events, pull_requests, repositories, review_comments, users};
+use crate::models::{
+    branch_protection_rules as protection, events, pr_reviews, pull_requests, repositories,
+    review_comments, users,
+};
 use crate::workers::merge_pull_request::{Worker as MergeWorker, WorkerArgs as MergeArgs};
 
 /// Resolves an optional JWT to a user id. Anonymous requests are allowed.
@@ -59,12 +62,39 @@ fn open_git(ctx: &AppContext, owner: &str, repo: &repositories::Model) -> Result
     GitRepo::open(&settings.repo_base_dir, owner, repo.display_name()?)
 }
 
+/// Merge requirements for a PR: the base branch rule plus the current reviews.
+/// Returns `(required_approvals, approval_count, blocked_reason)`. The same
+/// function feeds the SPA badge and the authoritative merge check, so the UI
+/// can never disagree with the server about whether a merge is allowed.
+async fn merge_readiness(
+    db: &sea_orm::DatabaseConnection,
+    repo: &repositories::Model,
+    pr: &pull_requests::Model,
+) -> Result<(i64, i64, Option<String>)> {
+    let rule = protection::Entity::find_for_branch(db, repo.id, &pr.base_ref).await?;
+    let required = rule.map_or(0, |row| row.required_approvals());
+    let approvals = pr_reviews::Entity::approval_count(db, pr.id, pr.user_id).await?;
+    let reason = if !pr.is_open() {
+        Some("only open pull requests can be merged".to_owned())
+    } else if approvals < required {
+        Some(format!(
+            "requires {required} approving review(s) — {approvals}/{required} so far"
+        ))
+    } else {
+        None
+    };
+    Ok((required, approvals, reason))
+}
+
 /// Builds a PR DTO.
 async fn pr_response(
     db: &sea_orm::DatabaseConnection,
+    repo: &repositories::Model,
     pr: pull_requests::Model,
 ) -> Result<PullRequestResponse> {
     let comment_count = pr.comment_count(db).await?;
+    let (required_approvals, approval_count, merge_blocked_reason) =
+        merge_readiness(db, repo, &pr).await?;
     Ok(PullRequestResponse {
         id: pr.id,
         number: pr.number,
@@ -76,6 +106,9 @@ async fn pr_response(
         head_sha: pr.head_sha,
         base_ref: pr.base_ref,
         comment_count,
+        required_approvals,
+        approval_count,
+        merge_blocked_reason,
         merged_at: pr.merged_at.map(|value| value.to_rfc3339()),
         merged_commit_sha: pr.merged_commit_sha,
         created_at: pr.created_at.to_rfc3339(),
@@ -118,7 +151,7 @@ pub async fn list(
         pull_requests::Model::find_by_repository(&ctx.db, row.id, query.state.as_deref()).await?;
     let mut response = Vec::with_capacity(prs.len());
     for pr in prs {
-        response.push(pr_response(&ctx.db, pr).await?);
+        response.push(pr_response(&ctx.db, &row, pr).await?);
     }
     format::json(response)
 }
@@ -186,7 +219,7 @@ pub async fn create(
         Some(json!({ "number": pr.number })),
     )
     .await?;
-    format::json(pr_response(&ctx.db, pr).await?)
+    format::json(pr_response(&ctx.db, &row, pr).await?)
 }
 
 /// `GET /api/repos/{owner}/{repo}/pulls/{number}`.
@@ -199,7 +232,7 @@ pub async fn show(
     let viewer = viewer_id(&ctx, viewer).await?;
     let row = find_repo(&ctx, &owner, &repo, viewer).await?;
     let pr = pull_requests::Model::find_by_number(&ctx.db, row.id, number).await?;
-    format::json(pr_response(&ctx.db, pr).await?)
+    format::json(pr_response(&ctx.db, &row, pr).await?)
 }
 
 /// True for a repository writer (or admin/owner) or the PR author.
@@ -235,7 +268,7 @@ async fn set_state(
         ..Default::default()
     };
     let updated = active.set_state(&ctx.db, state).await?;
-    format::json(pr_response(&ctx.db, updated).await?)
+    format::json(pr_response(&ctx.db, &row, updated).await?)
 }
 
 /// `POST /api/repos/{owner}/{repo}/pulls/{number}/close`.
@@ -282,6 +315,12 @@ pub async fn merge(
     if !pr.is_open() {
         return bad_request("only open pull requests can be merged");
     }
+    // Authoritative branch-protection check. The SPA shows the same reason from
+    // the PR DTO, but a stale client must not be able to merge early.
+    let (_, _, blocked) = merge_readiness(&ctx.db, &row, &pr).await?;
+    if let Some(reason) = blocked {
+        return bad_request(&reason);
+    }
 
     // Defensive refresh: the push handler normally keeps head_sha current, but
     // a PR may have been reopened after a push that bypassed it. Re-resolve
@@ -311,7 +350,7 @@ pub async fn merge(
         .one(&ctx.db)
         .await?
         .ok_or_else(|| Error::string("pull request disappeared during merge"))?;
-    format::json(pr_response(&ctx.db, pr).await?)
+    format::json(pr_response(&ctx.db, &row, pr).await?)
 }
 
 /// `GET /api/repos/{owner}/{repo}/pulls/{number}/comments`.

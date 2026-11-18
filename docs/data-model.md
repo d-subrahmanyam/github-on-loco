@@ -104,6 +104,22 @@ the viewer's own state. `events` is an append-only activity log — payloads hol
 small display hints (issue/PR number, branch, collaborator handle), never
 authoritative state. The SPA feed reads `events` newest first.
 
+### `branch_protection_rules`, `pr_reviews` (Phase 4)
+
+| Table | Columns |
+|---|---|
+| `branch_protection_rules` | `repository_id`, `branch`, `require_pull_request`, `required_approvals` — `unique(repository_id, branch)` |
+| `pr_reviews` | `pull_request_id`, `user_id`, `state` (`approved`/`changes_requested`/`commented`), `body` (nullable) — `unique(pull_request_id, user_id)` |
+
+A rule is per branch and upserted by the settings page. `require_pull_request`
+is enforced in the git push handler (admins and the owner are exempt); the merge
+worker writes directly with git plumbing, so a PR is still the only way in.
+`required_approvals` is checked in the merge endpoint against distinct
+approving reviewers *excluding the PR author*. Reviews are one row per reviewer
+and change verdict in place. The PR DTO carries `approval_count`,
+`required_approvals` and `merge_blocked_reason` from the same helper the merge
+endpoint uses.
+
 ## Target model (GitHub-shaped)
 
 These tables are *planned*, not implemented. Add them with
@@ -118,12 +134,12 @@ collaborators          (existing)
 
 pull_requests          (existing)   + merged_commit_sha
 review_comments        (existing)
-pr_reviews                                                   (Phase 4, optional)
+pr_reviews             (existing)
 stars                  (existing)
 watches                (existing)
 events                 (existing)   + actor via user_id
 forks                  source_repo_id, repository_id
-
+branch_protection_rules (existing)
 organizations / org_members / teams        (Phase 4)
 releases / tags                            (Phase 5)
 ```

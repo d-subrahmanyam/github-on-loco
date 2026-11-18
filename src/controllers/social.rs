@@ -67,6 +67,11 @@ fn event_text(event: &events::Model) -> String {
         events::kind::ISSUE_REOPENED => format!("reopened issue #{}", field("number")),
         events::kind::PR_OPENED => format!("opened pull request #{}", field("number")),
         events::kind::PR_MERGED => format!("merged pull request #{}", field("number")),
+        events::kind::PR_APPROVED => format!("approved pull request #{}", field("number")),
+        events::kind::PR_CHANGES_REQUESTED => {
+            format!("requested changes on pull request #{}", field("number"))
+        }
+        events::kind::PR_REVIEWED => format!("reviewed pull request #{}", field("number")),
         events::kind::COLLABORATOR_ADDED => {
             format!("added @{} as {}", field("target"), field("role"))
         }

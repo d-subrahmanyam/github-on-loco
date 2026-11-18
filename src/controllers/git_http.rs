@@ -20,7 +20,8 @@ use tokio::{io::AsyncWriteExt, process::Command};
 
 use crate::data::{git::GitRepo, settings::AppSettings};
 use crate::models::{
-    events, personal_access_tokens, pull_requests, repositories as repo_model, users,
+    branch_protection_rules as protection, events, personal_access_tokens, pull_requests,
+    repositories as repo_model, users,
 };
 
 fn ensure_git_repo_path(repo: &str) -> Result<()> {
@@ -66,18 +67,28 @@ async fn authenticated_user(ctx: &AppContext, headers: &HeaderMap) -> Option<use
 }
 
 /// Authenticates a git request through the repository's single `can` rule.
-/// Returns the handle to pass to `git http-backend` as `REMOTE_USER`.
+/// Returns the user so callers can also check admin status for branch rules.
 async fn authorize_git_request(
     ctx: &AppContext,
     headers: &HeaderMap,
     repo: &repo_model::Model,
     action: repo_model::RepoAction,
-) -> Option<String> {
+) -> Option<users::Model> {
     let user = authenticated_user(ctx, headers).await?;
     if !repo.can(&ctx.db, Some(user.id), action).await.ok()? {
         return None;
     }
-    Some(user.owner_handle().to_owned())
+    Some(user)
+}
+
+/// A protected branch refuses direct pushes. The merge worker writes via git
+/// plumbing instead, so pull requests remain the only way in.
+fn protected_branch_rejected() -> Result<Response> {
+    Ok((
+        StatusCode::FORBIDDEN,
+        "branch is protected: merge through a pull request",
+    )
+        .into_response())
 }
 
 /// Extracts the branch name from the first pkt-line of a receive-pack request:
@@ -228,10 +239,10 @@ async fn info_refs(
         } else {
             repo_model::RepoAction::Read
         };
-        let Some(login) = authorize_git_request(&ctx, &headers, row, action).await else {
+        let Some(user) = authorize_git_request(&ctx, &headers, row, action).await else {
             return unauthorized_basic();
         };
-        Some(login)
+        Some(user.owner_handle().to_owned())
     } else {
         None
     };
@@ -263,12 +274,12 @@ async fn upload_pack(
         let Some(row) = row.as_ref() else {
             return unauthorized_basic();
         };
-        let Some(login) =
+        let Some(user) =
             authorize_git_request(&ctx, &headers, row, repo_model::RepoAction::Read).await
         else {
             return unauthorized_basic();
         };
-        Some(login)
+        Some(user.owner_handle().to_owned())
     } else {
         None
     };
@@ -354,13 +365,20 @@ async fn receive_pack(
     let Some(row) = find_git_repo(&ctx, &owner, &repo).await else {
         return unauthorized_basic();
     };
-    let Some(login) =
+    let Some(user) =
         authorize_git_request(&ctx, &headers, &row, repo_model::RepoAction::Write).await
     else {
         return unauthorized_basic();
     };
+    let login = user.owner_handle().to_owned();
 
     let branch = pushed_ref(&body).unwrap_or_else(|| "a branch".to_owned());
+    // Admins (including the owner) stay exempt, matching GitHub's default.
+    if let Some(rule) = protection::Entity::find_for_branch(&ctx.db, row.id, &branch).await? {
+        if rule.require_pull_request() && !row.can_admin(&ctx.db, user.id).await? {
+            return protected_branch_rejected();
+        }
+    }
     let response = run_git_http_backend(
         "POST",
         &settings.repo_base_dir,

@@ -4,6 +4,7 @@ mod git_browse;
 mod git_http;
 mod issues;
 mod prepare_data;
+mod protection;
 mod pulls;
 mod repositories;
 mod social;

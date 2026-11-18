@@ -34,6 +34,9 @@ end-to-end slice of that product.
   auth, so access changes take effect everywhere at once.
 - **Stars, watches and activity** — star/watch buttons with live counts, plus a
   repository activity feed fed by an append-only event log.
+- **Branch protection** — per-branch rules that block direct pushes to writers
+  and require a configurable number of non-author approvals before a PR can
+  merge. Reviews and merge readiness are shown on the PR page.
 - **Caching** — branch heads and default-branch commits are cached in Postgres;
   git remains the source of truth and a push invalidates the cache.
 - **Frontend** — React + Vite SPA with Redux Toolkit slices and Redux Saga for
@@ -135,6 +138,5 @@ database on every boot.
 
 ## Not yet implemented
 
-Organisations and teams, forks, branch protection, notifications, search, and
-horizontal scaling of git storage. See [docs/roadmap.md](docs/roadmap.md) for
-the planned phases.
+Organisations and teams, forks, notifications, search, and horizontal scaling
+of git storage. See [docs/roadmap.md](docs/roadmap.md) for the planned phases.

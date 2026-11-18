@@ -45,6 +45,15 @@ pub struct PullRequestResponse {
     pub base_ref: String,
     #[ts(type = "number")]
     pub comment_count: i64,
+    /// Approvals required by the base branch's protection rule (0 when none).
+    #[ts(type = "number")]
+    pub required_approvals: i64,
+    /// Approving reviews from someone other than the PR author.
+    #[ts(type = "number")]
+    pub approval_count: i64,
+    /// Why this PR cannot be merged right now; `null` when it can.
+    #[ts(type = "string | null")]
+    pub merge_blocked_reason: Option<String>,
     pub merged_at: Option<String>,
     pub merged_commit_sha: Option<String>,
     pub created_at: String,

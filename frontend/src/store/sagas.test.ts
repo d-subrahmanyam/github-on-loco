@@ -3,6 +3,7 @@ import { collaboratorRequested } from './collaboratorsSlice'
 import { createAppStore } from './index'
 import { createRequested, listRequested } from './repositoriesSlice'
 import { issueRequested } from './issuesSlice'
+import { protectionRequested } from './protectionSlice'
 import { pullRequested } from './pullsSlice'
 import { socialRequested } from './socialSlice'
 import { tokenRequested } from './tokensSlice'
@@ -105,6 +106,9 @@ describe('pull request sagas', () => {
     head_sha: 'abc123',
     base_ref: 'main',
     comment_count: 0,
+    required_approvals: 0,
+    approval_count: 0,
+    merge_blocked_reason: null,
     merged_at: '2026-01-01T00:00:00Z',
     merged_commit_sha: 'def456',
     created_at: '2026-01-01T00:00:00Z',
@@ -186,6 +190,90 @@ describe('collaborator sagas', () => {
       expect.stringContaining('/collaborators'),
       expect.objectContaining({ method: 'POST' }),
     )
+  })
+})
+
+describe('protection sagas', () => {
+  it('saves a rule and refreshes the rule list', async () => {
+    const rule = {
+      id: 1,
+      branch: 'main',
+      require_pull_request: true,
+      required_approvals: 2,
+    }
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === 'POST') return jsonResponse(rule)
+      return jsonResponse([rule])
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = createAppStore()
+    store.dispatch(
+      protectionRequested({
+        part: 'set',
+        key: 'set',
+        owner: 'a',
+        name: 'r',
+        params: {
+          branch: 'main',
+          require_pull_request: true,
+          required_approvals: 2,
+        },
+      }),
+    )
+
+    await vi.waitFor(() => expect(store.getState().protection.rules).toEqual([rule]))
+    expect(fetchMock.mock.calls.some((call) => call[1]?.method === 'POST')).toBe(true)
+  })
+
+  it('reloads reviews and the PR after an approval', async () => {
+    const review = {
+      id: 1,
+      author: 'reviewer',
+      state: 'approved',
+      body: null,
+      created_at: '2026-01-01T00:00:00Z',
+    }
+    const pr = {
+      id: 1,
+      number: 1,
+      title: 'A change',
+      body: null,
+      state: 'open',
+      author: 'author',
+      head_ref: 'feature',
+      head_sha: 'abc',
+      base_ref: 'main',
+      comment_count: 0,
+      required_approvals: 1,
+      approval_count: 1,
+      merge_blocked_reason: null,
+      merged_at: null,
+      merged_commit_sha: null,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === 'POST') return jsonResponse(review)
+      if (String(_input).includes('/reviews')) return jsonResponse([review])
+      return jsonResponse(pr)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = createAppStore()
+    store.dispatch(
+      protectionRequested({
+        part: 'review',
+        key: 'review',
+        owner: 'a',
+        name: 'r',
+        number: 1,
+        params: { state: 'approved', body: null },
+      }),
+    )
+
+    await vi.waitFor(() => expect(store.getState().protection.reviews).toEqual([review]))
+    expect(store.getState().pulls.current?.approval_count).toBe(1)
   })
 })
 

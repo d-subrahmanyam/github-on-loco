@@ -3,4 +3,16 @@
 /**
  * One PR in a list or detail response.
  */
-export type PullRequestResponse = { id: number, number: number, title: string, body: string | null, state: string, author: string, head_ref: string, head_sha: string, base_ref: string, comment_count: number, merged_at: string | null, merged_commit_sha: string | null, created_at: string, updated_at: string, };
+export type PullRequestResponse = { id: number, number: number, title: string, body: string | null, state: string, author: string, head_ref: string, head_sha: string, base_ref: string, comment_count: number, 
+/**
+ * Approvals required by the base branch's protection rule (0 when none).
+ */
+required_approvals: number, 
+/**
+ * Approving reviews from someone other than the PR author.
+ */
+approval_count: number, 
+/**
+ * Why this PR cannot be merged right now; `null` when it can.
+ */
+merge_blocked_reason: string | null, merged_at: string | null, merged_commit_sha: string | null, created_at: string, updated_at: string, };

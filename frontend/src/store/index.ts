@@ -3,6 +3,7 @@ import createSagaMiddleware from 'redux-saga'
 import browseReducer from './browseSlice'
 import collaboratorsReducer from './collaboratorsSlice'
 import issuesReducer from './issuesSlice'
+import protectionReducer from './protectionSlice'
 import pullsReducer from './pullsSlice'
 import repositoriesReducer from './repositoriesSlice'
 import rootSaga from './sagas'
@@ -20,6 +21,7 @@ export function createAppStore() {
       social: socialReducer,
       issues: issuesReducer,
       pulls: pullsReducer,
+      protection: protectionReducer,
       tokens: tokensReducer,
     },
     // Saga owns side effects; the default async thunk middleware is not needed.

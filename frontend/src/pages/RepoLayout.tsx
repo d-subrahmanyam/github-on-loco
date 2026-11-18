@@ -9,6 +9,7 @@ import {
   FaHistory,
   FaRegEye,
   FaRegStar,
+  FaShieldAlt,
   FaStar,
   FaUsers,
 } from 'react-icons/fa'
@@ -166,9 +167,14 @@ export function RepoLayout() {
             <FaHistory /> Activity
           </NavLink>
           {canAdminRole(role) && (
-            <NavLink to="collaborators" className={tabClass}>
-              <FaUsers /> Collaborators
-            </NavLink>
+            <>
+              <NavLink to="collaborators" className={tabClass}>
+                <FaUsers /> Collaborators
+              </NavLink>
+              <NavLink to="branch-protection" className={tabClass}>
+                <FaShieldAlt /> Branch protection
+              </NavLink>
+            </>
           )}
         </nav>
       </section>

@@ -7,6 +7,7 @@
 pub mod collaborators;
 pub mod common;
 pub mod issues;
+pub mod protection;
 pub mod pulls;
 pub mod repositories;
 pub mod social;

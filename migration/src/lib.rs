@@ -24,6 +24,8 @@ mod m20261117_200241_collaborators;
 mod m20261118_011005_stars;
 mod m20261118_011120_watches;
 mod m20261118_011245_events;
+mod m20261118_013846_branch_protection_rules;
+mod m20261118_014015_pr_reviews;
 pub struct Migrator;
 
 #[async_trait::async_trait]
@@ -46,6 +48,8 @@ impl MigratorTrait for Migrator {
             Box::new(m20261118_011005_stars::Migration),
             Box::new(m20261118_011120_watches::Migration),
             Box::new(m20261118_011245_events::Migration),
+            Box::new(m20261118_013846_branch_protection_rules::Migration),
+            Box::new(m20261118_014015_pr_reviews::Migration),
             // inject-above (do not remove this comment)
         ]
     }

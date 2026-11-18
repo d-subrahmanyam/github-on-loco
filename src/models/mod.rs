@@ -5,6 +5,7 @@
 //! `cargo loco db entities` and must never be edited by hand.
 
 pub mod _entities;
+pub mod branch_protection_rules;
 pub mod branches;
 pub mod collaborators;
 pub mod commits;
@@ -14,6 +15,7 @@ pub mod issue_labels;
 pub mod issues;
 pub mod labels;
 pub mod personal_access_tokens;
+pub mod pr_reviews;
 pub mod pull_requests;
 pub mod repositories;
 pub mod review_comments;

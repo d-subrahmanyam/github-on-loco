@@ -66,11 +66,18 @@ for obtaining a JWT and building the `Authorization` header.
   request tests for toggle counts, `viewer_role`-free anonymous behaviour,
   private-repo visibility, and events produced by stars/watches/issues/PR
   merges. A unit test parses the branch out of a receive-pack pkt-line body.
+- **Branch protection and reviews**: model tests for rule upsert/validation and
+  review verdict changes (including excluding the author's own approval);
+  request tests for admin-only settings, blocked merges until approvals arrive,
+  self-review rejection, and a synthetic receive-pack push that is rejected for
+  a writer but allowed through for the owner. The approval event shows up in the
+  activity feed.
 - **Frontend**: Vitest + Testing Library (`pnpm test` in `frontend/`) cover the
-  repository/issue/pull/collaborator/social/token sagas against a mocked `fetch`
+  repository/issue/pull/collaborator/protection/social/token sagas against a mocked `fetch`
   (including stale-response protection), the password visibility toggle, token
-  storage and logout routing, and rendering of the issue, PR, collaborator and
-  activity pages. `pnpm build` still type-checks everything.
+  storage and logout routing, and rendering of the issue, PR, collaborator,
+  branch-protection and activity pages. `pnpm build` still type-checks
+  everything.
 - **Tasks**: user create/delete.
 
 ## Writing a new request test

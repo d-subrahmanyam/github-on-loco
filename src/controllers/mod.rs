@@ -11,6 +11,7 @@ pub mod git_http;
 pub mod repositories;
 
 pub mod issues;
+pub mod protection;
 pub mod pulls;
 pub mod social;
 

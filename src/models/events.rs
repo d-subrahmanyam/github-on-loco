@@ -19,6 +19,9 @@ pub mod kind {
     pub const ISSUE_REOPENED: &str = "issue.reopened";
     pub const PR_OPENED: &str = "pr.opened";
     pub const PR_MERGED: &str = "pr.merged";
+    pub const PR_APPROVED: &str = "pr.approved";
+    pub const PR_CHANGES_REQUESTED: &str = "pr.changes_requested";
+    pub const PR_REVIEWED: &str = "pr.reviewed";
     pub const COLLABORATOR_ADDED: &str = "collaborator.added";
     pub const COLLABORATOR_REMOVED: &str = "collaborator.removed";
     pub const PUSH: &str = "push";

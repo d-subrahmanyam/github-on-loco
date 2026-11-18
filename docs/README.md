@@ -41,9 +41,13 @@ product:
 - stars, watches and an append-only activity log with an SPA feed
   (`models/stars.rs`, `models/watches.rs`, `models/events.rs`,
   `controllers/social.rs`);
+- branch protection rules and PR approvals: push blocks and required reviewers
+  (`models/branch_protection_rules.rs`, `models/pr_reviews.rs`,
+  `controllers/protection.rs`, `controllers/git_http.rs`);
 - a React SPA (`frontend/`) with login/register, a repository dashboard, code
-  browser, commit history/detail, branch list, issue tracker and pull request
-  pages. Client state and all API side effects are handled by **Redux Toolkit +
+  browser, commit history/detail, branch list, issue tracker, pull request and
+  branch-protection settings pages. Client state and all API side effects are
+  handled by **Redux Toolkit +
   Redux Saga** (`frontend/src/store/`).
 
 ## Run it

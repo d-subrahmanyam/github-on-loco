@@ -1,16 +1,19 @@
 import {
   FaArrowLeft,
   FaCheck,
+  FaCheckCircle,
   FaCodeBranch,
   FaComment,
   FaFileAlt,
   FaGitAlt,
   FaRedo,
+  FaTimesCircle,
 } from 'react-icons/fa'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useParams } from 'react-router'
 import { getToken } from '../auth/token'
+import { protectionRequested } from '../store/protectionSlice'
 import { pullRequested } from '../store/pullsSlice'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { card, codeBox, input, primaryButton, secondaryButton } from '../ui'
@@ -24,6 +27,9 @@ export function PullDetail() {
   const prNumber = Number(number)
   const { current, compare, comments, loading, error } = useAppSelector(
     (store) => store.pulls,
+  )
+  const { reviews, loading: protectionLoading, error: protectionError } = useAppSelector(
+    (store) => store.protection,
   )
   const [tab, setTab] = useState<'conversation' | 'diff'>('conversation')
   const [reply, setReply] = useState('')
@@ -40,6 +46,15 @@ export function PullDetail() {
     }
     dispatch(pullRequested({ part: 'detail', key: keys.detail, owner, name, number: prNumber }))
     dispatch(pullRequested({ part: 'comments', key: keys.comments, owner, name, number: prNumber }))
+    dispatch(
+      protectionRequested({
+        part: 'reviews',
+        key: `reviews:${scope}:${prNumber}`,
+        owner,
+        name,
+        number: prNumber,
+      }),
+    )
   }, [dispatch, owner, name, scope, prNumber])
 
   // Compare follows the head SHA stored on the PR, which the git push handler
@@ -79,6 +94,19 @@ export function PullDetail() {
         owner,
         name,
         number: prNumber,
+      }),
+    )
+  }
+
+  function submitReview(state: string) {
+    dispatch(
+      protectionRequested({
+        part: 'review',
+        key: `review:${scope}:${prNumber}:${Date.now()}`,
+        owner,
+        name,
+        number: prNumber,
+        params: { state, body: null },
       }),
     )
   }
@@ -140,6 +168,12 @@ export function PullDetail() {
                 <FaCodeBranch /> {current.head_ref} <span className="text-slate-400">→</span>{' '}
                 {current.base_ref}
               </p>
+              {current.required_approvals > 0 && (
+                <p className="mt-3 inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-1.5 text-sm text-slate-700">
+                  <FaCheckCircle className="text-green-600" />
+                  {current.approval_count} of {current.required_approvals} approvals
+                </p>
+              )}
             </div>
             {canWrite && current.state === 'open' && (
               <div className="flex flex-wrap gap-2">
@@ -153,8 +187,9 @@ export function PullDetail() {
                 </button>
                 <button
                   type="button"
-                  disabled={loading.merge || loading.state}
+                  disabled={loading.merge || loading.state || Boolean(current.merge_blocked_reason)}
                   onClick={merge}
+                  title={current.merge_blocked_reason ?? undefined}
                   className={`${primaryButton} disabled:opacity-50`}
                 >
                   <FaGitAlt /> {loading.merge ? 'Merging…' : 'Merge pull request'}
@@ -172,6 +207,12 @@ export function PullDetail() {
               </button>
             )}
           </div>
+          {current.state === 'open' && current.merge_blocked_reason && (
+            <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <FaTimesCircle className="mr-2 inline" />
+              Merge blocked: {current.merge_blocked_reason}
+            </p>
+          )}
           {current.merged_commit_sha && (
             <p className="mt-4 text-sm text-green-800">
               Merged in <code className="font-mono">{current.merged_commit_sha.slice(0, 12)}</code>
@@ -200,6 +241,60 @@ export function PullDetail() {
 
         {tab === 'conversation' && (
           <>
+            <div className="border-b border-slate-200 px-5 py-4">
+              <h3 className="mb-3 text-sm font-semibold text-slate-700">
+                Reviews ({reviews.length})
+              </h3>
+              {protectionLoading.reviews && (
+                <p className="text-sm text-slate-500">Loading reviews…</p>
+              )}
+              {protectionError.review && (
+                <p role="alert" className="text-sm text-red-700">{protectionError.review}</p>
+              )}
+              <ul className="space-y-2">
+                {reviews.map((review) => (
+                  <li key={review.id} className="flex flex-wrap items-center gap-2 text-sm">
+                    {review.state === 'approved' ? (
+                      <FaCheckCircle className="text-green-600" />
+                    ) : review.state === 'changes_requested' ? (
+                      <FaTimesCircle className="text-red-600" />
+                    ) : (
+                      <FaComment className="text-slate-400" />
+                    )}
+                    <span className="font-medium text-slate-800">{review.author}</span>
+                    <span className="text-slate-600">{review.state.replace('_', ' ')}</span>
+                  </li>
+                ))}
+              </ul>
+              {signedIn && canWrite && current?.state === 'open' && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={protectionLoading.review}
+                    onClick={() => submitReview('approved')}
+                    className={secondaryButton}
+                  >
+                    <FaCheckCircle /> Approve
+                  </button>
+                  <button
+                    type="button"
+                    disabled={protectionLoading.review}
+                    onClick={() => submitReview('changes_requested')}
+                    className={secondaryButton}
+                  >
+                    <FaTimesCircle /> Request changes
+                  </button>
+                  <button
+                    type="button"
+                    disabled={protectionLoading.review}
+                    onClick={() => submitReview('commented')}
+                    className={secondaryButton}
+                  >
+                    <FaComment /> Comment only
+                  </button>
+                </div>
+              )}
+            </div>
             {loading.comments && <p className="p-5 text-sm text-slate-500">Loading comments…</p>}
             <ul className="divide-y divide-slate-100">
               {comments.map((comment) => (

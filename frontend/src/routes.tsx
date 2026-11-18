@@ -3,6 +3,7 @@ import { App } from './App'
 import { Login } from './auth/Login'
 import { Register } from './auth/Register'
 import { RequireAuth } from './auth/RequireAuth'
+import { BranchProtection } from './pages/BranchProtection'
 import { Branches } from './pages/Branches'
 import { Collaborators } from './pages/Collaborators'
 import { CommitDetail } from './pages/CommitDetail'
@@ -48,6 +49,7 @@ export const router = createBrowserRouter([
           { path: 'pulls', element: <PullList /> },
           { path: 'pulls/:number', element: <PullDetail /> },
           { path: 'collaborators', element: <Collaborators /> },
+          { path: 'branch-protection', element: <BranchProtection /> },
           { path: 'activity', element: <RepoActivity /> },
         ],
       },

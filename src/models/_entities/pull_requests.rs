@@ -10,6 +10,7 @@ pub struct Model {
     pub updated_at: DateTimeWithTimeZone,
     #[sea_orm(primary_key)]
     pub id: i64,
+    #[sea_orm(unique_key = "number")]
     pub number: i64,
     pub title: String,
     #[sea_orm(column_type = "Text", nullable)]
@@ -20,12 +21,15 @@ pub struct Model {
     pub base_ref: String,
     pub merged_commit_sha: Option<String>,
     pub merged_at: Option<DateTimeWithTimeZone>,
+    #[sea_orm(unique_key = "number")]
     pub repository_id: i64,
     pub user_id: i64,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
+    #[sea_orm(has_many = "super::pr_reviews::Entity")]
+    PrReviews,
     #[sea_orm(
         belongs_to = "super::repositories::Entity",
         from = "Column::RepositoryId",
@@ -44,6 +48,12 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     Users,
+}
+
+impl Related<super::pr_reviews::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::PrReviews.def()
+    }
 }
 
 impl Related<super::repositories::Entity> for Entity {
