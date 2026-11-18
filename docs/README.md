@@ -38,6 +38,9 @@ product:
 - collaborators with `read`/`write`/`admin` roles and one `can(user, action)`
   rule shared by REST and git auth (`models/collaborators.rs`,
   `models/repositories.rs`, `controllers/git_http.rs`);
+- stars, watches and an append-only activity log with an SPA feed
+  (`models/stars.rs`, `models/watches.rs`, `models/events.rs`,
+  `controllers/social.rs`);
 - a React SPA (`frontend/`) with login/register, a repository dashboard, code
   browser, commit history/detail, branch list, issue tracker and pull request
   pages. Client state and all API side effects are handled by **Redux Toolkit +

@@ -29,6 +29,13 @@ pub struct RepoResponse {
     /// The requesting user's role: `owner`, `admin`, `write`, `read` or `none`.
     /// The SPA uses this to show/hide management controls.
     pub viewer_role: String,
+    #[ts(type = "number")]
+    pub star_count: i64,
+    #[ts(type = "number")]
+    pub watch_count: i64,
+    /// Whether the requesting user has starred/watched this repository.
+    pub starred: bool,
+    pub watching: bool,
 }
 
 /// A branch name and the commit it points at.

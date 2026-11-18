@@ -6,12 +6,13 @@
 
 use loco_rs::prelude::*;
 use serde::Deserialize;
+use serde_json::json;
 
 use crate::dtos::issues::{
     AddCommentParams, CommentResponse, CreateIssueParams, CreateLabelParams, IssueResponse,
     LabelResponse,
 };
-use crate::models::{issue_comments, issue_labels, issues, labels, repositories, users};
+use crate::models::{events, issue_comments, issue_labels, issues, labels, repositories, users};
 
 /// Resolves an optional JWT to a user id. Anonymous requests are allowed.
 async fn viewer_id(ctx: &AppContext, viewer: Option<auth::JWT>) -> Result<Option<i64>> {
@@ -122,6 +123,14 @@ pub async fn create(
         &params.label_ids,
     )
     .await?;
+    events::Entity::record(
+        &ctx.db,
+        row.id,
+        user.id,
+        events::kind::ISSUE_OPENED,
+        Some(json!({ "number": issue.number })),
+    )
+    .await?;
     format::json(issue_response(&ctx.db, issue).await?)
 }
 
@@ -158,6 +167,19 @@ async fn set_state(
         ..Default::default()
     };
     let updated = active.set_state(&ctx.db, state).await?;
+    let kind = if state == issues::STATE_CLOSED {
+        events::kind::ISSUE_CLOSED
+    } else {
+        events::kind::ISSUE_REOPENED
+    };
+    events::Entity::record(
+        &ctx.db,
+        row.id,
+        user.id,
+        kind,
+        Some(json!({ "number": updated.number })),
+    )
+    .await?;
     format::json(issue_response(&ctx.db, updated).await?)
 }
 

@@ -21,3 +21,9 @@ mod pull_requests;
 mod review_comments;
 
 mod collaborators;
+
+mod stars;
+
+mod watches;
+
+mod events;

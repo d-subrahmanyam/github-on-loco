@@ -7,13 +7,14 @@
 
 use loco_rs::prelude::*;
 use serde::Deserialize;
+use serde_json::json;
 
 use crate::data::{git::GitRepo, settings::AppSettings};
 use crate::dtos::pulls::{
     AddReviewCommentParams, CompareResult, CreatePullRequestParams, PullRequestResponse,
     ReviewCommentResponse,
 };
-use crate::models::{pull_requests, repositories, review_comments, users};
+use crate::models::{events, pull_requests, repositories, review_comments, users};
 use crate::workers::merge_pull_request::{Worker as MergeWorker, WorkerArgs as MergeArgs};
 
 /// Resolves an optional JWT to a user id. Anonymous requests are allowed.
@@ -177,6 +178,14 @@ pub async fn create(
         &params.base_ref,
     )
     .await?;
+    events::Entity::record(
+        &ctx.db,
+        row.id,
+        user.id,
+        events::kind::PR_OPENED,
+        Some(json!({ "number": pr.number })),
+    )
+    .await?;
     format::json(pr_response(&ctx.db, pr).await?)
 }
 
@@ -294,6 +303,7 @@ pub async fn merge(
         &ctx,
         MergeArgs {
             pull_request_id: pr.id,
+            actor_id: user.id,
         },
     )
     .await?;

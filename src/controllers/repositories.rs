@@ -78,6 +78,10 @@ pub async fn create(
         is_private: repo.is_private(),
         clone_url: clone_url(&ctx, &repo.clone_path(user.owner_handle())?),
         viewer_role: repo_model::ROLE_OWNER.to_owned(),
+        star_count: 0,
+        watch_count: 0,
+        starred: false,
+        watching: false,
     })
 }
 
@@ -99,6 +103,10 @@ pub async fn list(auth: auth::JWT, State(ctx): State<AppContext>) -> Result<Resp
                 is_private: repo.is_private(),
                 clone_url: clone_url(&ctx, &format!("/{}/{name}.git", user.owner_handle())),
                 viewer_role: repo_model::ROLE_OWNER.to_owned(),
+                star_count: 0,
+                watch_count: 0,
+                starred: false,
+                watching: false,
             })
         })
         .collect::<Result<Vec<_>>>()?;

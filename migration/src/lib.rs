@@ -21,6 +21,9 @@ mod m20261117_173417_issue_labels;
 mod m20261117_192611_pull_requests;
 mod m20261117_192708_review_comments;
 mod m20261117_200241_collaborators;
+mod m20261118_011005_stars;
+mod m20261118_011120_watches;
+mod m20261118_011245_events;
 pub struct Migrator;
 
 #[async_trait::async_trait]
@@ -40,6 +43,9 @@ impl MigratorTrait for Migrator {
             Box::new(m20261117_192611_pull_requests::Migration),
             Box::new(m20261117_192708_review_comments::Migration),
             Box::new(m20261117_200241_collaborators::Migration),
+            Box::new(m20261118_011005_stars::Migration),
+            Box::new(m20261118_011120_watches::Migration),
+            Box::new(m20261118_011245_events::Migration),
             // inject-above (do not remove this comment)
         ]
     }

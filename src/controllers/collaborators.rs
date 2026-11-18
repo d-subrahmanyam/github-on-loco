@@ -4,11 +4,12 @@
 #![allow(clippy::unused_async)]
 
 use loco_rs::prelude::*;
+use serde_json::json;
 
 use crate::dtos::collaborators::{
     AddCollaboratorParams, CollaboratorResponse, UpdateCollaboratorParams,
 };
-use crate::models::{collaborators, repositories, users};
+use crate::models::{collaborators, events, repositories, users};
 
 /// Resolves an optional JWT to a user id. Anonymous requests are allowed.
 async fn viewer_id(ctx: &AppContext, viewer: Option<auth::JWT>) -> Result<Option<i64>> {
@@ -89,6 +90,14 @@ pub async fn add(
         return bad_request("the repository owner already has every permission");
     }
     let grant = collaborators::ActiveModel::add(&ctx.db, row.id, invited.id, &params.role).await?;
+    events::Entity::record(
+        &ctx.db,
+        row.id,
+        user.id,
+        events::kind::COLLABORATOR_ADDED,
+        Some(json!({ "target": invited.username, "role": params.role })),
+    )
+    .await?;
     format::json(collaborator_response(&ctx.db, grant).await?)
 }
 
@@ -129,7 +138,20 @@ pub async fn remove(
     if !row.can_admin(&ctx.db, user.id).await? {
         return not_found();
     }
+    let target = users::Entity::find_by_id(user_id)
+        .one(&ctx.db)
+        .await?
+        .map(|user| user.username)
+        .unwrap_or_else(|| "unknown".to_owned());
     collaborators::Entity::remove(&ctx.db, row.id, user_id).await?;
+    events::Entity::record(
+        &ctx.db,
+        row.id,
+        user.id,
+        events::kind::COLLABORATOR_REMOVED,
+        Some(json!({ "target": target })),
+    )
+    .await?;
     format::empty_json()
 }
 

@@ -62,11 +62,15 @@ for obtaining a JWT and building the `Authorization` header.
   request tests for add/update/remove, invalid roles, non-admin rejection, and
   the same grant taking effect over REST *and* git (read can clone a private
   repo, write can push, removal revokes both).
+- **Stars, watches and events**: model tests for idempotent toggles and counts;
+  request tests for toggle counts, `viewer_role`-free anonymous behaviour,
+  private-repo visibility, and events produced by stars/watches/issues/PR
+  merges. A unit test parses the branch out of a receive-pack pkt-line body.
 - **Frontend**: Vitest + Testing Library (`pnpm test` in `frontend/`) cover the
-  repository/issue/pull/collaborator/token sagas against a mocked `fetch`
+  repository/issue/pull/collaborator/social/token sagas against a mocked `fetch`
   (including stale-response protection), the password visibility toggle, token
-  storage and logout routing, and rendering of the issue, PR and collaborator
-  pages. `pnpm build` still type-checks everything.
+  storage and logout routing, and rendering of the issue, PR, collaborator and
+  activity pages. `pnpm build` still type-checks everything.
 - **Tasks**: user create/delete.
 
 ## Writing a new request test

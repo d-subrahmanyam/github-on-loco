@@ -14,11 +14,14 @@ use axum::{
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use loco_rs::prelude::*;
 use serde::Deserialize;
+use serde_json::json;
 use std::process::Stdio;
 use tokio::{io::AsyncWriteExt, process::Command};
 
 use crate::data::{git::GitRepo, settings::AppSettings};
-use crate::models::{personal_access_tokens, pull_requests, repositories as repo_model, users};
+use crate::models::{
+    events, personal_access_tokens, pull_requests, repositories as repo_model, users,
+};
 
 fn ensure_git_repo_path(repo: &str) -> Result<()> {
     if !repo.ends_with(".git") {
@@ -75,6 +78,24 @@ async fn authorize_git_request(
         return None;
     }
     Some(user.owner_handle().to_owned())
+}
+
+/// Extracts the branch name from the first pkt-line of a receive-pack request:
+/// `<old-sha> <new-sha> refs/heads/<branch>\0<capabilities>`.
+fn pushed_ref(body: &Bytes) -> Option<String> {
+    let text = String::from_utf8_lossy(body);
+    let len = usize::from_str_radix(text.get(0..4)?, 16).ok()?;
+    let payload = text.get(4..4 + len)?;
+    let mut parts = payload.split_whitespace();
+    let _old = parts.next()?;
+    let _new = parts.next()?;
+    let reference = parts.next()?.split('\0').next()?;
+    Some(
+        reference
+            .strip_prefix("refs/heads/")
+            .unwrap_or(reference)
+            .to_owned(),
+    )
 }
 
 /// Loads a repository from the `.git`-suffixed path segment.
@@ -339,6 +360,7 @@ async fn receive_pack(
         return unauthorized_basic();
     };
 
+    let branch = pushed_ref(&body).unwrap_or_else(|| "a branch".to_owned());
     let response = run_git_http_backend(
         "POST",
         &settings.repo_base_dir,
@@ -352,6 +374,13 @@ async fn receive_pack(
     )
     .await?;
 
+    // Best-effort activity record; a failed event must not fail a push.
+    if let Ok(actor) = users::Model::find_by_username(&ctx.db, &login).await {
+        let payload = json!({ "branch": branch });
+        let _ =
+            events::Entity::record(&ctx.db, row.id, actor.id, events::kind::PUSH, Some(payload))
+                .await;
+    }
     invalidate_repo_cache(&ctx, &owner, &repo).await;
     sync_pull_request_heads(&ctx, &owner, &repo).await;
     Ok(response)
@@ -364,6 +393,22 @@ pub fn routes() -> Routes {
         .add("/info/refs", get(info_refs))
         .add("/git-upload-pack", post(upload_pack))
         .add("/git-receive-pack", post(receive_pack))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extracts_the_branch_from_a_receive_pack_body() {
+        let payload = format!(
+            "{} {} refs/heads/feature/x\0report-status",
+            "0".repeat(40),
+            "1".repeat(40)
+        );
+        let body = Bytes::from(format!("{:04x}{payload}", payload.len()));
+        assert_eq!(pushed_ref(&body).as_deref(), Some("feature/x"));
+    }
 }
 
 #[derive(Debug, Deserialize)]

@@ -3,15 +3,21 @@ import {
   FaCodeBranch,
   FaCopy,
   FaExclamationCircle,
+  FaEye,
   FaFolder,
   FaGitAlt,
   FaHistory,
+  FaRegEye,
+  FaRegStar,
+  FaStar,
   FaUsers,
 } from 'react-icons/fa'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useOutletContext, useParams } from 'react-router'
+import { getToken } from '../auth/token'
 import { browseRequested } from '../store/browseSlice'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
+import { socialRequested } from '../store/socialSlice'
 import { card, codeBox } from '../ui'
 
 export interface RepoParams {
@@ -42,8 +48,11 @@ export function RepoLayout() {
   const dispatch = useAppDispatch()
   const { owner = '', name = '' } = useParams()
   const { overview, loading, error } = useAppSelector((state) => state.browse)
+  const social = useAppSelector((state) => state.social)
+  const stats = social.stats ?? overview
   const role = useRepoRole()
   const [copied, setCopied] = useState(false)
+  const signedIn = Boolean(getToken())
 
   useEffect(() => {
     dispatch(
@@ -82,16 +91,58 @@ export function RepoLayout() {
             {loading.overview && <p className="mt-2 text-sm text-slate-400">Loading…</p>}
             {error.overview && <p role="alert" className="mt-2 text-sm text-red-700">{error.overview}</p>}
           </div>
-          {overview && (
-            <button
-              type="button"
-              onClick={copyCloneUrl}
-              title="Copy clone URL"
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
-            >
-              <FaCopy /> {copied ? 'Copied!' : 'Clone URL'}
-            </button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {signedIn && stats && (
+              <>
+                <button
+                  type="button"
+                  onClick={() =>
+                    dispatch(
+                      socialRequested({
+                        part: stats.starred ? 'unstar' : 'star',
+                        key: `${stats.starred ? 'unstar' : 'star'}:${owner}/${name}`,
+                        owner,
+                        name,
+                      }),
+                    )
+                  }
+                  disabled={social.loading.star || social.loading.unstar}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {stats.starred ? <FaStar className="text-amber-500" /> : <FaRegStar />}
+                  {stats.starred ? 'Starred' : 'Star'} · {stats.star_count}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    dispatch(
+                      socialRequested({
+                        part: stats.watching ? 'unwatch' : 'watch',
+                        key: `${stats.watching ? 'unwatch' : 'watch'}:${owner}/${name}`,
+                        owner,
+                        name,
+                      }),
+                    )
+                  }
+                  disabled={social.loading.watch || social.loading.unwatch}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {stats.watching ? <FaEye className="text-blue-600" /> : <FaRegEye />}
+                  {stats.watching ? 'Watching' : 'Watch'} · {stats.watch_count}
+                </button>
+              </>
+            )}
+            {overview && (
+              <button
+                type="button"
+                onClick={copyCloneUrl}
+                title="Copy clone URL"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
+              >
+                <FaCopy /> {copied ? 'Copied!' : 'Clone URL'}
+              </button>
+            )}
+          </div>
         </div>
         {overview && <div className={`${codeBox} m-6 mt-0 truncate`}>{overview.clone_url}</div>}
 
@@ -110,6 +161,9 @@ export function RepoLayout() {
           </NavLink>
           <NavLink to="pulls" className={tabClass}>
             <FaGitAlt /> Pull requests
+          </NavLink>
+          <NavLink to="activity" className={tabClass}>
+            <FaHistory /> Activity
           </NavLink>
           {canAdminRole(role) && (
             <NavLink to="collaborators" className={tabClass}>

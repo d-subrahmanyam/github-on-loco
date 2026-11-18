@@ -4,6 +4,7 @@ import { createAppStore } from './index'
 import { createRequested, listRequested } from './repositoriesSlice'
 import { issueRequested } from './issuesSlice'
 import { pullRequested } from './pullsSlice'
+import { socialRequested } from './socialSlice'
 import { tokenRequested } from './tokensSlice'
 import { jsonResponse } from '../test/helpers'
 
@@ -16,7 +17,7 @@ describe('repository sagas', () => {
         name: 'hello',
         description: null,
         is_private: false,
-        clone_url: 'http://localhost:5150/alice/hello.git', viewer_role: 'owner',
+        clone_url: 'http://localhost:5150/alice/hello.git', viewer_role: 'owner', star_count: 0, watch_count: 0, starred: false, watching: false,
       },
     ]
     const fetchMock = vi.fn(async () => jsonResponse(repos))
@@ -39,7 +40,7 @@ describe('repository sagas', () => {
       name: 'new-repo',
       description: null,
       is_private: true,
-      clone_url: 'http://localhost:5150/alice/new-repo.git', viewer_role: 'owner',
+      clone_url: 'http://localhost:5150/alice/new-repo.git', viewer_role: 'owner', star_count: 0, watch_count: 0, starred: false, watching: false,
     }
     const posts: unknown[] = []
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
@@ -185,6 +186,33 @@ describe('collaborator sagas', () => {
       expect.stringContaining('/collaborators'),
       expect.objectContaining({ method: 'POST' }),
     )
+  })
+})
+
+describe('social sagas', () => {
+  it('stars a repo and refreshes the activity feed', async () => {
+    const stats = { star_count: 1, watch_count: 0, starred: true, watching: false }
+    const events = [
+      {
+        id: 1,
+        actor: 'guest',
+        kind: 'star',
+        text: 'starred this repository',
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === 'POST') return jsonResponse(stats)
+      return jsonResponse(events)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = createAppStore()
+    store.dispatch(socialRequested({ part: 'star', key: 'star', owner: 'a', name: 'r' }))
+
+    await vi.waitFor(() => expect(store.getState().social.stats).toEqual(stats))
+    expect(store.getState().social.events).toEqual(events)
+    expect(fetchMock.mock.calls.some((call) => call[1]?.method === 'POST')).toBe(true)
   })
 })
 

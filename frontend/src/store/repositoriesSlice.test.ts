@@ -16,7 +16,7 @@ const repo: RepoResponse = {
   name: 'hello',
   description: null,
   is_private: false,
-  clone_url: 'http://localhost:5150/alice/hello.git', viewer_role: 'owner',
+  clone_url: 'http://localhost:5150/alice/hello.git', viewer_role: 'owner', star_count: 0, watch_count: 0, starred: false, watching: false,
 }
 
 const initial = reducer(undefined, { type: '@@INIT' })

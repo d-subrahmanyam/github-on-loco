@@ -91,6 +91,19 @@ Permissions are answered by `repositories::Model::can(db, user_id, action)` with
 grants `Read` to anyone, and everyone else is checked against this row.
 `can_read`, `can_write` and `can_admin` are wrappers around that one rule.
 
+### `stars`, `watches`, `events` (Phase 4)
+
+| Table | Columns |
+|---|---|
+| `stars` | `repository_id`, `user_id` — `unique(repository_id, user_id)` |
+| `watches` | `repository_id`, `user_id` — `unique(repository_id, user_id)` |
+| `events` | `repository_id`, `user_id` (actor), `kind` (string), `payload` (jsonb, nullable) |
+
+Stars and watches are idempotent toggles; the endpoints return fresh counts and
+the viewer's own state. `events` is an append-only activity log — payloads hold
+small display hints (issue/PR number, branch, collaborator handle), never
+authoritative state. The SPA feed reads `events` newest first.
+
 ## Target model (GitHub-shaped)
 
 These tables are *planned*, not implemented. Add them with
@@ -106,9 +119,10 @@ collaborators          (existing)
 pull_requests          (existing)   + merged_commit_sha
 review_comments        (existing)
 pr_reviews                                                   (Phase 4, optional)
-stars                  user_id, repository_id
+stars                  (existing)
+watches                (existing)
+events                 (existing)   + actor via user_id
 forks                  source_repo_id, repository_id
-events                 actor_id, repository_id, kind, payload(jsonb), created_at
 
 organizations / org_members / teams        (Phase 4)
 releases / tags                            (Phase 5)

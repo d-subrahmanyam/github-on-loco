@@ -32,6 +32,8 @@ end-to-end slice of that product.
 - **Collaborators** — grant `read`, `write` or `admin` roles on a repository.
   A single `can(user, action)` rule drives REST endpoints and git clone/push
   auth, so access changes take effect everywhere at once.
+- **Stars, watches and activity** — star/watch buttons with live counts, plus a
+  repository activity feed fed by an append-only event log.
 - **Caching** — branch heads and default-branch commits are cached in Postgres;
   git remains the source of truth and a push invalidates the cache.
 - **Frontend** — React + Vite SPA with Redux Toolkit slices and Redux Saga for
@@ -133,6 +135,6 @@ database on every boot.
 
 ## Not yet implemented
 
-Organisations and teams, branch protection, stars/forks/watches, activity
-events, notifications, search, and horizontal scaling of git storage. See
-[docs/roadmap.md](docs/roadmap.md) for the planned phases.
+Organisations and teams, forks, branch protection, notifications, search, and
+horizontal scaling of git storage. See [docs/roadmap.md](docs/roadmap.md) for
+the planned phases.

@@ -120,6 +120,7 @@ storage — that is a Phase 5/6 concern, documented in [roadmap.md](roadmap.md).
 | Public handle | new `username` column | `name` is display text and was not unique |
 | Repo create atomicity | roll back the DB row on git failure | Keeps metadata and disk in step without a distributed transaction |
 | Authorization | `repositories::Model::can(user, action)` | One rule for REST, git transport and every feature; wrappers only add names for common actions |
+| Activity | append-only `events` log with small display payloads | Git and the domain tables stay authoritative; the feed can be stale without being wrong |
 | Private repo browsing | enforced via `can(..., Read)` | 404 for viewers without a grant avoids leaking existence |
 | PR head identity | `head_ref` + tracked `head_sha` | Git stays authoritative; the push handler re-resolves the ref so compare and merge follow new commits |
 | PR merge | git plumbing in a background worker (`merge-tree`/`commit-tree`/guarded `update-ref`) | No worktree or extra dependency; compare-and-swap prevents overwriting a concurrent push |

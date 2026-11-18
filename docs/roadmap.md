@@ -66,8 +66,11 @@ Status legend: ✅ done · 🟡 partial · ⬜ planned.
       a private repo, `write` can also push, `admin` can manage access.
 - [x] `viewer_role` on the repository overview lets the SPA show only the
       controls the current user is allowed to use.
-- Remaining: organizations, teams, stars, forks, watches, activity events, and
-      branch protection rules.
+- [x] Stars and watches: toggle endpoints, counts and the viewer's state on the
+      repository overview, and buttons in the repo header.
+- [x] Append-only `events` log with an SPA activity feed. Issue/PR actions,
+      collaborator changes, star/watch toggles and pushes all record events.
+- Remaining: organizations, teams, forks, and branch protection rules.
 
 ## Phase 5 — Polish and scale ⬜
 

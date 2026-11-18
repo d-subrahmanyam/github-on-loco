@@ -32,6 +32,8 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::collaborators::Entity")]
     Collaborators,
+    #[sea_orm(has_many = "super::events::Entity")]
+    Events,
     #[sea_orm(has_many = "super::issue_comments::Entity")]
     IssueComments,
     #[sea_orm(has_many = "super::issues::Entity")]
@@ -44,11 +46,21 @@ pub enum Relation {
     Repositories,
     #[sea_orm(has_many = "super::review_comments::Entity")]
     ReviewComments,
+    #[sea_orm(has_many = "super::stars::Entity")]
+    Stars,
+    #[sea_orm(has_many = "super::watches::Entity")]
+    Watches,
 }
 
 impl Related<super::collaborators::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Collaborators.def()
+    }
+}
+
+impl Related<super::events::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Events.def()
     }
 }
 
@@ -85,5 +97,17 @@ impl Related<super::repositories::Entity> for Entity {
 impl Related<super::review_comments::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::ReviewComments.def()
+    }
+}
+
+impl Related<super::stars::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Stars.def()
+    }
+}
+
+impl Related<super::watches::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Watches.def()
     }
 }

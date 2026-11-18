@@ -15,7 +15,7 @@ use serde::Deserialize;
 
 use crate::data::{git::GitRepo, settings::AppSettings};
 use crate::dtos::repositories::{Branch, Commit, CommitDetail, RepoResponse, TreeEntry};
-use crate::models::{branches, commits, repositories as repo_model, users};
+use crate::models::{branches, commits, repositories as repo_model, stars, users, watches};
 
 /// Resolves an optional JWT to a user id. Anonymous requests are allowed.
 async fn viewer_id(ctx: &AppContext, viewer: Option<auth::JWT>) -> Result<Option<i64>> {
@@ -64,6 +64,16 @@ pub async fn overview(
     let viewer = viewer_id(&ctx, viewer).await?;
     let (row, _git) = open_repo(&ctx, &owner, &repo, viewer).await?;
     let viewer_role = row.role_for(&ctx.db, viewer).await?;
+    let star_count = stars::Entity::count_for_repository(&ctx.db, row.id).await?;
+    let watch_count = watches::Entity::count_for_repository(&ctx.db, row.id).await?;
+    let starred = match viewer {
+        Some(user_id) => stars::Entity::is_starred(&ctx.db, row.id, user_id).await?,
+        None => false,
+    };
+    let watching = match viewer {
+        Some(user_id) => watches::Entity::is_watching(&ctx.db, row.id, user_id).await?,
+        None => false,
+    };
     format::json(RepoResponse {
         id: row.id,
         owner: owner.clone(),
@@ -76,6 +86,10 @@ pub async fn overview(
             row.clone_path(&owner)?
         ),
         viewer_role,
+        star_count,
+        watch_count,
+        starred,
+        watching,
     })
 }
 

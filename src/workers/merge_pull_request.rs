@@ -6,9 +6,10 @@
 
 use loco_rs::prelude::*;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 use crate::data::{git::GitRepo, settings::AppSettings};
-use crate::models::{pull_requests, repositories, users};
+use crate::models::{events, pull_requests, repositories, users};
 
 pub struct Worker {
     pub ctx: AppContext,
@@ -17,6 +18,8 @@ pub struct Worker {
 #[derive(Deserialize, Debug, Serialize)]
 pub struct WorkerArgs {
     pub pull_request_id: i64,
+    /// Who requested the merge; used to attribute the activity event.
+    pub actor_id: i64,
 }
 
 #[async_trait]
@@ -69,6 +72,14 @@ impl BackgroundWorker<WorkerArgs> for Worker {
             ..Default::default()
         };
         active.mark_merged(&self.ctx.db, &commit).await?;
+        events::Entity::record(
+            &self.ctx.db,
+            repo.id,
+            args.actor_id,
+            events::kind::PR_MERGED,
+            Some(json!({ "number": pr.number })),
+        )
+        .await?;
         tracing::info!(pull_request_id = pr.id, %commit, "pull request merged");
         Ok(())
     }

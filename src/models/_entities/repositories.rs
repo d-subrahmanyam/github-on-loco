@@ -25,12 +25,16 @@ pub enum Relation {
     Collaborators,
     #[sea_orm(has_many = "super::commits::Entity")]
     Commits,
+    #[sea_orm(has_many = "super::events::Entity")]
+    Events,
     #[sea_orm(has_many = "super::issues::Entity")]
     Issues,
     #[sea_orm(has_many = "super::labels::Entity")]
     Labels,
     #[sea_orm(has_many = "super::pull_requests::Entity")]
     PullRequests,
+    #[sea_orm(has_many = "super::stars::Entity")]
+    Stars,
     #[sea_orm(
         belongs_to = "super::users::Entity",
         from = "Column::UserId",
@@ -39,6 +43,8 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     Users,
+    #[sea_orm(has_many = "super::watches::Entity")]
+    Watches,
 }
 
 impl Related<super::branches::Entity> for Entity {
@@ -56,6 +62,12 @@ impl Related<super::collaborators::Entity> for Entity {
 impl Related<super::commits::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Commits.def()
+    }
+}
+
+impl Related<super::events::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Events.def()
     }
 }
 
@@ -77,8 +89,20 @@ impl Related<super::pull_requests::Entity> for Entity {
     }
 }
 
+impl Related<super::stars::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Stars.def()
+    }
+}
+
 impl Related<super::users::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Users.def()
+    }
+}
+
+impl Related<super::watches::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Watches.def()
     }
 }

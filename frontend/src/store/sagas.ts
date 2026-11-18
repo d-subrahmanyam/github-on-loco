@@ -6,6 +6,7 @@ import { collaboratorsApi } from '../api/collaborators'
 import { issuesApi } from '../api/issues'
 import { pullsApi } from '../api/pulls'
 import { repositoriesApi } from '../api/repositories'
+import { socialApi } from '../api/social'
 import { tokensApi } from '../api/tokens'
 import type { AddCommentParams } from '../bindings/AddCommentParams'
 import type { AddReviewCommentParams } from '../bindings/AddReviewCommentParams'
@@ -39,6 +40,12 @@ import {
   pullSucceeded,
   type PullRequest as PullRequestAction,
 } from './pullsSlice'
+import {
+  socialFailed,
+  socialRequested,
+  socialSucceeded,
+  type SocialRequest,
+} from './socialSlice'
 import {
   tokenFailed,
   tokenRequested,
@@ -313,6 +320,39 @@ function* fetchCollaborator(action: PayloadAction<CollaboratorRequest>): SagaIte
   }
 }
 
+function* fetchSocial(action: PayloadAction<SocialRequest>): SagaIterator {
+  const { part, key, owner, name } = action.payload
+  try {
+    let data: unknown
+    switch (part) {
+      case 'star':
+        data = yield call(socialApi.star, owner, name)
+        break
+      case 'unstar':
+        data = yield call(socialApi.unstar, owner, name)
+        break
+      case 'watch':
+        data = yield call(socialApi.watch, owner, name)
+        break
+      case 'unwatch':
+        data = yield call(socialApi.unwatch, owner, name)
+        break
+      case 'events':
+        data = yield call(socialApi.events, owner, name)
+        break
+    }
+    yield put(socialSucceeded({ part, key, data }))
+    // A star/watch is itself an activity event, so refresh the feed.
+    if (part !== 'events') {
+      yield put(
+        socialRequested({ part: 'events', key: `events:${owner}/${name}`, owner, name }),
+      )
+    }
+  } catch (err) {
+    yield put(socialFailed({ part, key, error: errorMessage(err) }))
+  }
+}
+
 function* fetchToken(action: PayloadAction<TokenRequest>): SagaIterator {
   const { part, key, params, id } = action.payload
   try {
@@ -348,6 +388,7 @@ export default function* rootSaga(): SagaIterator {
     takeEvery(issueRequested.type, fetchIssue),
     takeEvery(pullRequested.type, fetchPull),
     takeEvery(collaboratorRequested.type, fetchCollaborator),
+    takeEvery(socialRequested.type, fetchSocial),
     takeEvery(tokenRequested.type, fetchToken),
   ])
 }

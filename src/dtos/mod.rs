@@ -9,4 +9,5 @@ pub mod common;
 pub mod issues;
 pub mod pulls;
 pub mod repositories;
+pub mod social;
 pub mod tokens;

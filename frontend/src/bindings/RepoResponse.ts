@@ -8,4 +8,8 @@ export type RepoResponse = { id: number, owner: string, name: string, descriptio
  * The requesting user's role: `owner`, `admin`, `write`, `read` or `none`.
  * The SPA uses this to show/hide management controls.
  */
-viewer_role: string, };
+viewer_role: string, star_count: number, watch_count: number, 
+/**
+ * Whether the requesting user has starred/watched this repository.
+ */
+starred: boolean, watching: boolean, };

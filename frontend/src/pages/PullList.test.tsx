@@ -21,7 +21,7 @@ function renderPulls() {
         description: null,
         is_private: false,
         clone_url: '',
-        viewer_role: 'owner',
+        viewer_role: 'owner', star_count: 0, watch_count: 0, starred: false, watching: false,
       },
     }),
   )

@@ -6,6 +6,7 @@ import issuesReducer from './issuesSlice'
 import pullsReducer from './pullsSlice'
 import repositoriesReducer from './repositoriesSlice'
 import rootSaga from './sagas'
+import socialReducer from './socialSlice'
 import tokensReducer from './tokensSlice'
 
 /** Build a fresh store with its own saga runtime. Tests use this for isolation. */
@@ -16,6 +17,7 @@ export function createAppStore() {
       repositories: repositoriesReducer,
       browse: browseReducer,
       collaborators: collaboratorsReducer,
+      social: socialReducer,
       issues: issuesReducer,
       pulls: pullsReducer,
       tokens: tokensReducer,
