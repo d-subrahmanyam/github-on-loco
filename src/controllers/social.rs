@@ -62,6 +62,11 @@ fn event_text(event: &events::Model) -> String {
         events::kind::UNSTAR => "unstarred this repository".to_owned(),
         events::kind::WATCH => "started watching this repository".to_owned(),
         events::kind::UNWATCH => "stopped watching this repository".to_owned(),
+        events::kind::FORK => format!(
+            "forked this repository to {}/{}",
+            field("owner"),
+            field("name")
+        ),
         events::kind::ISSUE_OPENED => format!("opened issue #{}", field("number")),
         events::kind::ISSUE_CLOSED => format!("closed issue #{}", field("number")),
         events::kind::ISSUE_REOPENED => format!("reopened issue #{}", field("number")),

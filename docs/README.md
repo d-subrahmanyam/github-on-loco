@@ -41,6 +41,8 @@ product:
 - stars, watches and an append-only activity log with an SPA feed
   (`models/stars.rs`, `models/watches.rs`, `models/events.rs`,
   `controllers/social.rs`);
+- forks: a bare git copy plus a source/fork edge, with fork counts and a fork
+  list (`models/forks.rs`, `controllers/forks.rs`);
 - branch protection rules and PR approvals: push blocks and required reviewers
   (`models/branch_protection_rules.rs`, `models/pr_reviews.rs`,
   `controllers/protection.rs`, `controllers/git_http.rs`);

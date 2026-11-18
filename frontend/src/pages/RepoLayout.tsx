@@ -1,3 +1,4 @@
+import { FaCodeFork } from 'react-icons/fa6'
 import {
   FaCode,
   FaCodeBranch,
@@ -13,10 +14,11 @@ import {
   FaStar,
   FaUsers,
 } from 'react-icons/fa'
-import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useOutletContext, useParams } from 'react-router'
+import { useEffect, useRef, useState } from 'react'
+import { NavLink, Outlet, useNavigate, useOutletContext, useParams } from 'react-router'
 import { getToken } from '../auth/token'
 import { browseRequested } from '../store/browseSlice'
+import { forkRequested, forksReset } from '../store/forksSlice'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { socialRequested } from '../store/socialSlice'
 import { card, codeBox } from '../ui'
@@ -47,19 +49,44 @@ export function canAdminRole(role: string): boolean {
 /** Header, tabs and overview data shared by every repository page. */
 export function RepoLayout() {
   const dispatch = useAppDispatch()
+  const navigate = useNavigate()
   const { owner = '', name = '' } = useParams()
   const { overview, loading, error } = useAppSelector((state) => state.browse)
   const social = useAppSelector((state) => state.social)
+  const forks = useAppSelector((state) => state.forks)
   const stats = social.stats ?? overview
   const role = useRepoRole()
   const [copied, setCopied] = useState(false)
+  const forkKey = useRef('')
   const signedIn = Boolean(getToken())
 
   useEffect(() => {
     dispatch(
       browseRequested({ part: 'overview', key: `${owner}/${name}`, owner, name }),
     )
+    dispatch(forksReset())
   }, [dispatch, owner, name])
+
+  // A fork creates a *different* repository, so navigate to it once the API
+  // confirms success — and only for the request this component started.
+  useEffect(() => {
+    if (!forks.created || forks.created.key !== forkKey.current) return
+    const { owner: newOwner, name: newName } = forks.created.data
+    dispatch(forksReset())
+    navigate(`/repos/${encodeURIComponent(newOwner)}/${encodeURIComponent(newName)}`)
+  }, [dispatch, forks.created, navigate])
+
+  function fork() {
+    forkKey.current = `fork:${owner}/${name}:${Date.now()}`
+    dispatch(
+      forkRequested({
+        part: 'create',
+        key: forkKey.current,
+        owner,
+        name,
+      }),
+    )
+  }
 
   async function copyCloneUrl() {
     if (!overview) return
@@ -86,13 +113,36 @@ export function RepoLayout() {
               <span>/</span>
               <span>{name}</span>
             </h1>
+            {overview?.parent && (
+              <p className="mt-2 text-sm text-slate-500">
+                forked from{' '}
+                <NavLink
+                  to={`/repos/${encodeURIComponent(overview.parent.owner)}/${encodeURIComponent(overview.parent.name)}`}
+                  className="font-medium text-blue-600 hover:underline"
+                >
+                  {overview.parent.owner}/{overview.parent.name}
+                </NavLink>
+              </p>
+            )}
             {overview?.description && (
               <p className="mt-2 text-sm text-slate-600">{overview.description}</p>
             )}
             {loading.overview && <p className="mt-2 text-sm text-slate-400">Loading…</p>}
             {error.overview && <p role="alert" className="mt-2 text-sm text-red-700">{error.overview}</p>}
+            {forks.error.create && <p role="alert" className="mt-2 text-sm text-red-700">{forks.error.create}</p>}
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {signedIn && overview && (
+              <button
+                type="button"
+                onClick={fork}
+                disabled={forks.loading.create}
+                title="Fork this repository to your account"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                <FaCodeFork /> {forks.loading.create ? 'Forking…' : 'Fork'} · {overview.fork_count}
+              </button>
+            )}
             {signedIn && stats && (
               <>
                 <button
@@ -162,6 +212,9 @@ export function RepoLayout() {
           </NavLink>
           <NavLink to="pulls" className={tabClass}>
             <FaGitAlt /> Pull requests
+          </NavLink>
+          <NavLink to="forks" className={tabClass}>
+            <FaCodeFork /> Forks
           </NavLink>
           <NavLink to="activity" className={tabClass}>
             <FaHistory /> Activity

@@ -105,8 +105,9 @@ final — it cannot be reopened or closed afterwards.
 - **You need write access to open or merge PRs.** The owner and `write`/`admin`
   collaborators have it; `read` collaborators can browse and comment but not
   create or merge. An admin can grant access on the repository's
-  **Collaborators** tab. Both branches must live in the same repository — forks
-  are not implemented yet.
+  **Collaborators** tab. Both branches must still live in the same repository:
+  you can fork a repository, but cross-repository pull requests are not
+  implemented yet.
 - **The head follows the branch.** The recorded head SHA is refreshed after
   every push, so pushing another commit (or force-pushing) to your branch
   updates the existing PR's compare view and merge target. Reload the PR page

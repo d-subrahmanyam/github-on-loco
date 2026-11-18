@@ -14,8 +14,9 @@ use loco_rs::prelude::*;
 use serde::Deserialize;
 
 use crate::data::{git::GitRepo, settings::AppSettings};
+use crate::dtos::forks::ForkParentResponse;
 use crate::dtos::repositories::{Branch, Commit, CommitDetail, RepoResponse, TreeEntry};
-use crate::models::{branches, commits, repositories as repo_model, stars, users, watches};
+use crate::models::{branches, commits, forks, repositories as repo_model, stars, users, watches};
 
 /// Resolves an optional JWT to a user id. Anonymous requests are allowed.
 async fn viewer_id(ctx: &AppContext, viewer: Option<auth::JWT>) -> Result<Option<i64>> {
@@ -74,6 +75,10 @@ pub async fn overview(
         Some(user_id) => watches::Entity::is_watching(&ctx.db, row.id, user_id).await?,
         None => false,
     };
+    let fork_count = forks::Entity::count_for_source(&ctx.db, row.id).await?;
+    let parent = forks::Entity::source_label(&ctx.db, row.id)
+        .await?
+        .map(|(owner, name)| ForkParentResponse { owner, name });
     format::json(RepoResponse {
         id: row.id,
         owner: owner.clone(),
@@ -90,6 +95,8 @@ pub async fn overview(
         watch_count,
         starred,
         watching,
+        fork_count,
+        parent,
     })
 }
 

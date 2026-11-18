@@ -36,6 +36,11 @@ pub struct RepoResponse {
     /// Whether the requesting user has starred/watched this repository.
     pub starred: bool,
     pub watching: bool,
+    /// Number of forks of this repository.
+    #[ts(type = "number")]
+    pub fork_count: i64,
+    /// Set when this repository is itself a fork.
+    pub parent: Option<crate::dtos::forks::ForkParentResponse>,
 }
 
 /// A branch name and the commit it points at.

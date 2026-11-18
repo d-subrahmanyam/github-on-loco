@@ -6,6 +6,7 @@
 
 pub mod auth;
 pub mod collaborators;
+pub mod forks;
 pub mod git_browse;
 pub mod git_http;
 pub mod repositories;

@@ -14,6 +14,7 @@ pub mod kind {
     pub const UNSTAR: &str = "unstar";
     pub const WATCH: &str = "watch";
     pub const UNWATCH: &str = "unwatch";
+    pub const FORK: &str = "fork";
     pub const ISSUE_OPENED: &str = "issue.opened";
     pub const ISSUE_CLOSED: &str = "issue.closed";
     pub const ISSUE_REOPENED: &str = "issue.reopened";

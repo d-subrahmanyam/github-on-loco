@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { collaboratorRequested } from './collaboratorsSlice'
 import { createAppStore } from './index'
+import { forkRequested } from './forksSlice'
 import { createRequested, listRequested } from './repositoriesSlice'
 import { issueRequested } from './issuesSlice'
 import { protectionRequested } from './protectionSlice'
@@ -18,7 +19,7 @@ describe('repository sagas', () => {
         name: 'hello',
         description: null,
         is_private: false,
-        clone_url: 'http://localhost:5150/alice/hello.git', viewer_role: 'owner', star_count: 0, watch_count: 0, starred: false, watching: false,
+        clone_url: 'http://localhost:5150/alice/hello.git', viewer_role: 'owner', star_count: 0, watch_count: 0, starred: false, watching: false, fork_count: 0, parent: null,
       },
     ]
     const fetchMock = vi.fn(async () => jsonResponse(repos))
@@ -41,7 +42,7 @@ describe('repository sagas', () => {
       name: 'new-repo',
       description: null,
       is_private: true,
-      clone_url: 'http://localhost:5150/alice/new-repo.git', viewer_role: 'owner', star_count: 0, watch_count: 0, starred: false, watching: false,
+      clone_url: 'http://localhost:5150/alice/new-repo.git', viewer_role: 'owner', star_count: 0, watch_count: 0, starred: false, watching: false, fork_count: 0, parent: null,
     }
     const posts: unknown[] = []
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
@@ -61,6 +62,54 @@ describe('repository sagas', () => {
     await vi.waitFor(() => expect(store.getState().repositories.items).toEqual([repo]))
     expect(posts).toEqual([{ name: 'new-repo', description: null, is_private: true }])
     expect(fetchMock.mock.calls.some((call) => call[1]?.method === 'GET')).toBe(true)
+  })
+})
+
+describe('fork sagas', () => {
+  const forkRepo = {
+    id: 2,
+    owner: 'guest',
+    name: 'hello',
+    description: null,
+    is_private: false,
+    clone_url: 'http://localhost:5150/guest/hello.git',
+    viewer_role: 'owner',
+    star_count: 0,
+    watch_count: 0,
+    starred: false,
+    watching: false,
+    fork_count: 0,
+    parent: { owner: 'alice', name: 'hello' },
+  }
+
+  it('creates a fork and keeps the response tagged with its request key', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(forkRepo))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = createAppStore()
+    store.dispatch(forkRequested({ part: 'create', key: 'fork-1', owner: 'alice', name: 'hello' }))
+
+    await vi.waitFor(() => expect(store.getState().forks.created?.key).toBe('fork-1'))
+    expect(store.getState().forks.created?.data).toEqual(forkRepo)
+  })
+
+  it('lists forks through the API', async () => {
+    const forks = [
+      {
+        id: 1,
+        repository_id: 2,
+        owner: 'guest',
+        name: 'hello',
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]
+    const fetchMock = vi.fn(async () => jsonResponse(forks))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = createAppStore()
+    store.dispatch(forkRequested({ part: 'list', key: 'list', owner: 'alice', name: 'hello' }))
+
+    await vi.waitFor(() => expect(store.getState().forks.forks).toEqual(forks))
   })
 })
 

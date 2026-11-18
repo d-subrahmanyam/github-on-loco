@@ -26,6 +26,7 @@ mod m20261118_011120_watches;
 mod m20261118_011245_events;
 mod m20261118_013846_branch_protection_rules;
 mod m20261118_014015_pr_reviews;
+mod m20261118_015959_forks;
 pub struct Migrator;
 
 #[async_trait::async_trait]
@@ -50,6 +51,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20261118_011245_events::Migration),
             Box::new(m20261118_013846_branch_protection_rules::Migration),
             Box::new(m20261118_014015_pr_reviews::Migration),
+            Box::new(m20261118_015959_forks::Migration),
             // inject-above (do not remove this comment)
         ]
     }

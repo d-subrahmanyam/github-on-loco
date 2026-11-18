@@ -5,6 +5,7 @@ pub use super::branches::Entity as Branches;
 pub use super::collaborators::Entity as Collaborators;
 pub use super::commits::Entity as Commits;
 pub use super::events::Entity as Events;
+pub use super::forks::Entity as Forks;
 pub use super::issue_comments::Entity as IssueComments;
 pub use super::issue_labels::Entity as IssueLabels;
 pub use super::issues::Entity as Issues;

@@ -3,6 +3,7 @@ import { all, call, put, takeEvery, takeLatest } from 'redux-saga/effects'
 import type { SagaIterator } from 'redux-saga'
 import { ApiClientError } from '../api/client'
 import { collaboratorsApi } from '../api/collaborators'
+import { forksApi } from '../api/forks'
 import { issuesApi } from '../api/issues'
 import { protectionApi } from '../api/protection'
 import { pullsApi } from '../api/pulls'
@@ -31,6 +32,12 @@ import {
   collaboratorSucceeded,
   type CollaboratorRequest,
 } from './collaboratorsSlice'
+import {
+  forkFailed,
+  forkRequested,
+  forkSucceeded,
+  type ForkRequest,
+} from './forksSlice'
 import {
   issueFailed,
   issueRequested,
@@ -123,6 +130,26 @@ function* fetchBrowse(action: PayloadAction<BrowseRequest>): SagaIterator {
     yield put(browseSucceeded({ part, key, data }))
   } catch (err) {
     yield put(browseFailed({ part, key, error: errorMessage(err) }))
+  }
+}
+
+function* fetchFork(action: PayloadAction<ForkRequest>): SagaIterator {
+  const { part, key, owner, name, forkName } = action.payload
+  try {
+    let data: unknown
+    switch (part) {
+      case 'list':
+        data = yield call(forksApi.list, owner, name)
+        break
+      case 'create':
+        data = yield call(forksApi.create, owner, name, {
+          name: forkName || null,
+        })
+        break
+    }
+    yield put(forkSucceeded({ part, key, data }))
+  } catch (err) {
+    yield put(forkFailed({ part, key, error: errorMessage(err) }))
   }
 }
 
@@ -463,6 +490,7 @@ export default function* rootSaga(): SagaIterator {
     takeLatest(browseRequested.type, fetchBrowse),
     // takeEvery (not takeLatest): several issue requests run in parallel and
     // stale responses are dropped by the key stored in issuesSlice.
+    takeEvery(forkRequested.type, fetchFork),
     takeEvery(issueRequested.type, fetchIssue),
     takeEvery(pullRequested.type, fetchPull),
     takeEvery(collaboratorRequested.type, fetchCollaborator),

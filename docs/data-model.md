@@ -104,6 +104,20 @@ the viewer's own state. `events` is an append-only activity log — payloads hol
 small display hints (issue/PR number, branch, collaborator handle), never
 authoritative state. The SPA feed reads `events` newest first.
 
+### `forks` (Phase 4)
+
+| Column | Notes |
+|---|---|
+| `id`, `created_at`, `updated_at` | standard |
+| `source_repository_id` → `repositories.id` | the repository copied from |
+| `repository_id` → `repositories.id` | the new fork — `unique(repository_id)` |
+
+A fork is a normal repository row plus a bare `git clone --bare` of the source,
+linked by this table. Source metadata (owner handle, name) is resolved on read,
+not duplicated. Fork names default to the source name and get a `-fork-N` suffix
+when the caller already owns that name. Forking requires read access, so public
+repos can be forked by any signed-in user while private ones need a grant.
+
 ### `branch_protection_rules`, `pr_reviews` (Phase 4)
 
 | Table | Columns |
@@ -138,7 +152,7 @@ pr_reviews             (existing)
 stars                  (existing)
 watches                (existing)
 events                 (existing)   + actor via user_id
-forks                  source_repo_id, repository_id
+forks                  (existing)
 branch_protection_rules (existing)
 organizations / org_members / teams        (Phase 4)
 releases / tags                            (Phase 5)

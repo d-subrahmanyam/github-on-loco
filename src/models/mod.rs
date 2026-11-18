@@ -10,6 +10,7 @@ pub mod branches;
 pub mod collaborators;
 pub mod commits;
 pub mod events;
+pub mod forks;
 pub mod issue_comments;
 pub mod issue_labels;
 pub mod issues;

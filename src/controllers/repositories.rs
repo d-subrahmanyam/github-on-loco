@@ -82,6 +82,8 @@ pub async fn create(
         watch_count: 0,
         starred: false,
         watching: false,
+        fork_count: 0,
+        parent: None,
     })
 }
 
@@ -107,6 +109,8 @@ pub async fn list(auth: auth::JWT, State(ctx): State<AppContext>) -> Result<Resp
                 watch_count: 0,
                 starred: false,
                 watching: false,
+                fork_count: 0,
+                parent: None,
             })
         })
         .collect::<Result<Vec<_>>>()?;

@@ -57,6 +57,7 @@ impl Hooks for App {
             .add_route(controllers::collaborators::routes())
             .add_route(controllers::social::routes())
             .add_route(controllers::protection::routes())
+            .add_route(controllers::forks::routes())
             .add_route(controllers::git_browse::routes())
             .add_route(controllers::auth::routes())
             .add_route(controllers::repositories::routes())

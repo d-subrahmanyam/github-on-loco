@@ -6,6 +6,7 @@ import { browseReset } from './store/browseSlice'
 import { useAppDispatch } from './store/hooks'
 import { issuesReset } from './store/issuesSlice'
 import { collaboratorsReset } from './store/collaboratorsSlice'
+import { forksReset } from './store/forksSlice'
 import { protectionReset } from './store/protectionSlice'
 import { socialReset } from './store/socialSlice'
 import { pullsReset } from './store/pullsSlice'
@@ -28,6 +29,7 @@ export function App() {
     dispatch(issuesReset())
     dispatch(pullsReset())
     dispatch(collaboratorsReset())
+    dispatch(forksReset())
     dispatch(protectionReset())
     dispatch(socialReset())
     dispatch(tokensReset())

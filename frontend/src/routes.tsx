@@ -7,6 +7,7 @@ import { BranchProtection } from './pages/BranchProtection'
 import { Branches } from './pages/Branches'
 import { Collaborators } from './pages/Collaborators'
 import { CommitDetail } from './pages/CommitDetail'
+import { Forks } from './pages/Forks'
 import { Commits } from './pages/Commits'
 import { Home } from './pages/Home'
 import { IssueDetail } from './pages/IssueDetail'
@@ -48,6 +49,7 @@ export const router = createBrowserRouter([
           { path: 'issues/:number', element: <IssueDetail /> },
           { path: 'pulls', element: <PullList /> },
           { path: 'pulls/:number', element: <PullDetail /> },
+          { path: 'forks', element: <Forks /> },
           { path: 'collaborators', element: <Collaborators /> },
           { path: 'branch-protection', element: <BranchProtection /> },
           { path: 'activity', element: <RepoActivity /> },

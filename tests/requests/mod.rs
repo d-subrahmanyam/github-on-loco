@@ -1,5 +1,6 @@
 mod auth;
 mod collaborators;
+mod forks;
 mod git_browse;
 mod git_http;
 mod issues;

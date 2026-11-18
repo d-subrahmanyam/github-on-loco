@@ -74,7 +74,11 @@ Status legend: ✅ done · 🟡 partial · ⬜ planned.
       and require a configurable number of non-author approvals before merge.
       Reviews are upserted per reviewer; the PR DTO carries merge readiness so
       the SPA and the authoritative merge check agree.
-- Remaining: organizations, teams, and forks.
+- [x] Forks: a `forks` edge plus a bare `git clone --bare`, fork/list endpoints,
+      fork counts and "forked from" metadata on the repo overview, and an SPA
+      fork button and fork list. Fork names avoid collisions with a `-fork-N`
+      suffix.
+- Remaining: organizations and teams.
 
 ## Phase 5 — Polish and scale ⬜
 
