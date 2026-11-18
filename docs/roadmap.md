@@ -34,7 +34,9 @@ Status legend: ✅ done · 🟡 partial · ⬜ planned.
 - [x] `open`/`closed` state transitions, comments, and label CRUD endpoints.
 - [x] SPA: issue list with state filter, new-issue form, issue detail with
       close/reopen and commenting; labels shown as coloured badges.
-- [ ] Markdown rendering in the frontend (plain text bodies for now).
+- [x] Markdown rendering in the frontend: a shared, safe GFM renderer for
+      issue/PR bodies, review and comment bodies, and release notes
+      (`frontend/src/components/Markdown.tsx`).
 
 ## Phase 3 — Pull requests ✅
 

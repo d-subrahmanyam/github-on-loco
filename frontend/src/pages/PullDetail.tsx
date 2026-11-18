@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useParams } from 'react-router'
 import { getToken } from '../auth/token'
+import { Markdown } from '../components/Markdown'
 import { protectionRequested } from '../store/protectionSlice'
 import { pullRequested } from '../store/pullsSlice'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
@@ -223,9 +224,11 @@ export function PullDetail() {
               {error.merge || error.state}
             </p>
           )}
-          <p className="mt-6 whitespace-pre-wrap text-slate-700">
-            {current.body || <em className="text-slate-400">No description provided.</em>}
-          </p>
+          {current.body ? (
+            <Markdown source={current.body} className="mt-6" />
+          ) : (
+            <p className="mt-6 text-slate-400">No description provided.</p>
+          )}
         </section>
       )}
 
@@ -263,6 +266,11 @@ export function PullDetail() {
                     )}
                     <span className="font-medium text-slate-800">{review.author}</span>
                     <span className="text-slate-600">{review.state.replace('_', ' ')}</span>
+                    {review.body && (
+                      <span className="w-full">
+                        <Markdown source={review.body} />
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -305,7 +313,7 @@ export function PullDetail() {
                       {comment.path}{comment.line ? `:${comment.line}` : ''}
                     </p>
                   )}
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{comment.body}</p>
+                  <Markdown source={comment.body} className="mt-2" />
                 </li>
               ))}
             </ul>

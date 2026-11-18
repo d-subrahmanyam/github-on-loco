@@ -33,7 +33,8 @@ product:
   (`data/git.rs`, `controllers/git_browse.rs`), with a read-through Postgres cache
   for branch heads and default-branch commits;
 - issues and labels with per-repository numbering (`models/issues.rs`,
-  `controllers/issues.rs`);
+  `controllers/issues.rs`), with issue/PR/comment/release bodies rendered as
+  GitHub-flavoured Markdown by `frontend/src/components/Markdown.tsx`;
 - pull requests with a three-dot compare view, review comments and a background
   merge worker (`models/pull_requests.rs`, `data/git.rs`,
   `workers/merge_pull_request.rs`) — see

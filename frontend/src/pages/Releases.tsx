@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { releasesApi } from '../api/releases'
 import type { ReleaseResponse } from '../bindings/ReleaseResponse'
+import { Markdown } from '../components/Markdown'
 import { releaseRequested } from '../store/releasesSlice'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { card, input, label, primaryButton } from '../ui'
@@ -161,9 +162,7 @@ export function Releases() {
                 {release.author} released this {release.published_at.slice(0, 10)} ·{' '}
                 <span className="font-mono">{shortSha(release.commit_sha)}</span>
               </p>
-              {release.body && (
-                <p className="whitespace-pre-wrap text-sm text-slate-700">{release.body}</p>
-              )}
+              {release.body && <Markdown source={release.body} />}
               <div className="flex flex-wrap items-center gap-3">
                 <a
                   href={releasesApi.archiveUrl(owner, name, release.tag_name)}

@@ -25,7 +25,8 @@ end-to-end slice of that product.
 - **Code browsing** — branches, commit history, commit detail, directory trees
   and raw files, exposed as a typed JSON API and rendered by the SPA.
 - **Issues and labels** — per-repository issue numbers, open/closed states,
-  coloured labels, comments, and an SPA issue tracker.
+  coloured labels, comments, and an SPA issue tracker. Bodies and comments use
+  safely rendered GitHub-flavoured Markdown.
 - **Pull requests** — per-repository numbering, a three-dot compare view
   (commits + per-file patches), review comments, and merges performed by a
   background worker with a git compare-and-swap guard.

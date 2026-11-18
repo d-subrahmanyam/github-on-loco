@@ -97,8 +97,9 @@ for obtaining a JWT and building the `Authorization` header.
   repository/fork/issue/organization/pull/collaborator/protection/social/token sagas against a mocked `fetch`
   (including stale-response protection), the password visibility toggle, token
   storage and logout routing, and rendering of the issue, PR, collaborator,
-  fork-list, organization, branch-protection and activity pages. `pnpm build` still type-checks
-  everything.
+  fork-list, organization, branch-protection, releases and activity pages.
+  The `Markdown` component test checks GFM rendering and that raw HTML and
+  `javascript:` links are not emitted. `pnpm build` still type-checks everything.
 - **Git storage consistency**: unit tests for bare-repo detection, safe storage
   clearing, and that creation refuses to reuse an existing bare repo (409) while
   leaving its data untouched; a request test simulates a lost DB row and checks

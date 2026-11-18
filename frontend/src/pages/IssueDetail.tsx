@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useParams } from 'react-router'
 import { getToken } from '../auth/token'
+import { Markdown } from '../components/Markdown'
 import { issueRequested } from '../store/issuesSlice'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { card, input, primaryButton } from '../ui'
@@ -123,9 +124,11 @@ export function IssueDetail() {
             </div>
           )}
 
-          <p className="mt-6 whitespace-pre-wrap text-slate-700">
-            {current.body || <em className="text-slate-400">No description provided.</em>}
-          </p>
+          {current.body ? (
+            <Markdown source={current.body} className="mt-6" />
+          ) : (
+            <p className="mt-6 text-slate-400">No description provided.</p>
+          )}
         </section>
       )}
 
@@ -139,7 +142,7 @@ export function IssueDetail() {
           {comments.map((comment) => (
             <li key={comment.id} className="px-5 py-4">
               <p className="text-sm font-medium text-slate-800">{comment.author}</p>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{comment.body}</p>
+              <Markdown source={comment.body} className="mt-2" />
             </li>
           ))}
         </ul>
