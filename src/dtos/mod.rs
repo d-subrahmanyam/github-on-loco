@@ -13,6 +13,7 @@ pub mod protection;
 pub mod pulls;
 pub mod releases;
 pub mod repositories;
+pub mod search;
 pub mod social;
 pub mod tokens;
 pub mod webhooks;

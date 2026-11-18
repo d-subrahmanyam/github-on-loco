@@ -23,6 +23,7 @@ import { RepoCode } from './pages/RepoCode'
 import { Tokens } from './pages/Tokens'
 import { Webhooks } from './pages/Webhooks'
 import { RepoLayout } from './pages/RepoLayout'
+import { Search } from './pages/Search'
 // scaffold:imports
 
 export const router = createBrowserRouter([
@@ -33,6 +34,7 @@ export const router = createBrowserRouter([
       { index: true, element: <Home /> },
       { path: 'login', element: <Login /> },
       { path: 'register', element: <Register /> },
+      { path: 'search', element: <Search /> },
       {
         element: <RequireAuth />,
         children: [

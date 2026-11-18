@@ -1,4 +1,4 @@
-import { FaKey, FaSignOutAlt } from 'react-icons/fa'
+import { FaKey, FaSearch, FaSignOutAlt } from 'react-icons/fa'
 import { useSyncExternalStore } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router'
 import { clearToken, getTokenSnapshot, subscribeToken } from './auth/token'
@@ -10,6 +10,7 @@ import { collaboratorsReset } from './store/collaboratorsSlice'
 import { forksReset } from './store/forksSlice'
 import { protectionReset } from './store/protectionSlice'
 import { releasesReset } from './store/releasesSlice'
+import { searchReset } from './store/searchSlice'
 import { socialReset } from './store/socialSlice'
 import { pullsReset } from './store/pullsSlice'
 import { reset as resetRepositories } from './store/repositoriesSlice'
@@ -35,6 +36,7 @@ export function App() {
     dispatch(collaboratorsReset())
     dispatch(forksReset())
     dispatch(releasesReset())
+    dispatch(searchReset())
     dispatch(protectionReset())
     dispatch(socialReset())
     dispatch(tokensReset())
@@ -57,6 +59,9 @@ export function App() {
           <nav className="flex flex-1 items-center gap-5 text-sm">
             <Link to="/" className="text-slate-300 hover:text-white">
               Home
+            </Link>
+            <Link to="/search" className="inline-flex items-center gap-1 text-slate-300 hover:text-white">
+              <FaSearch /> Search
             </Link>
             {isAuthenticated && (
               <Link to="/dashboard" className="text-slate-300 hover:text-white">

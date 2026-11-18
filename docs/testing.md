@@ -71,6 +71,11 @@ for obtaining a JWT and building the `Authorization` header.
   answers; request tests for owner-only settings, creating a repo under an org,
   a member gaining and losing git push access as a team grant is added/revoked,
   and a personal repo with the same name not shadowing an org repo.
+- **Search**: a request test proves that anonymous and stranger searches see
+  only public repositories and their issues/PRs, while the owner also sees
+  private matches; it also checks case-insensitivity, short-query validation
+  and that search never mutates data. Frontend tests cover the saga's
+  stale-response handling and the results page.
 - **Webhooks**: model tests for event subscription matching (including the
   wildcard), validation, secret rotation and delivery status transitions; a
   deterministic HMAC test; request tests for admin-only settings, masked

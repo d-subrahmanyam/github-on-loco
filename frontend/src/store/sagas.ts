@@ -10,6 +10,7 @@ import { protectionApi } from '../api/protection'
 import { pullsApi } from '../api/pulls'
 import { releasesApi } from '../api/releases'
 import { repositoriesApi } from '../api/repositories'
+import { searchApi } from '../api/search'
 import { socialApi } from '../api/social'
 import { tokensApi } from '../api/tokens'
 import { webhooksApi } from '../api/webhooks'
@@ -27,6 +28,7 @@ import type { CreateRepoParams } from '../bindings/CreateRepoParams'
 import type { CreateTokenParams } from '../bindings/CreateTokenParams'
 import type { CreateWebhookParams } from '../bindings/CreateWebhookParams'
 import type { RepoResponse } from '../bindings/RepoResponse'
+import type { SearchResult } from '../bindings/SearchResult'
 import type { SetBranchProtectionParams } from '../bindings/SetBranchProtectionParams'
 import type { SetReviewParams } from '../bindings/SetReviewParams'
 import type { UpdateReleaseParams } from '../bindings/UpdateReleaseParams'
@@ -91,6 +93,12 @@ import {
   tokenSucceeded,
   type TokenRequest,
 } from './tokensSlice'
+import {
+  searchFailed,
+  searchRequested,
+  searchSucceeded,
+  type SearchRequest,
+} from './searchSlice'
 import {
   webhookFailed,
   webhookRequested,
@@ -179,6 +187,16 @@ function* fetchFork(action: PayloadAction<ForkRequest>): SagaIterator {
     yield put(forkSucceeded({ part, key, data }))
   } catch (err) {
     yield put(forkFailed({ part, key, error: errorMessage(err) }))
+  }
+}
+
+function* fetchSearch(action: PayloadAction<SearchRequest>): SagaIterator {
+  const { key, query } = action.payload
+  try {
+    const result: SearchResult = yield call(searchApi.run, query)
+    yield put(searchSucceeded({ key, result }))
+  } catch (err) {
+    yield put(searchFailed({ key, error: errorMessage(err) }))
   }
 }
 
@@ -747,6 +765,7 @@ export default function* rootSaga(): SagaIterator {
     takeEvery(forkRequested.type, fetchFork),
     takeEvery(releaseRequested.type, fetchRelease),
     takeEvery(webhookRequested.type, fetchWebhook),
+    takeEvery(searchRequested.type, fetchSearch),
     takeEvery(orgRequested.type, fetchOrg),
     takeEvery(issueRequested.type, fetchIssue),
     takeEvery(pullRequested.type, fetchPull),

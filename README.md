@@ -38,6 +38,8 @@ end-to-end slice of that product.
 - **Organizations and teams** — repositories can be owned by an organization.
   Owners manage teams, and a team's per-repo role feeds the same authorization
   rule used by REST and git push.
+- **Search** — a global, permission-aware search over repositories, issues and
+  pull requests. Private repositories are invisible to users without a grant.
 - **Webhooks** — repository admins can subscribe to activity events. Deliveries
   are queued, HMAC-signed (`X-Hub-Signature-256`), retried, and shown with their
   status in the SPA.
@@ -123,6 +125,7 @@ The development config uses a clearly-labelled dev-only base64 value.
 | Git | `/{owner}/{repo}/info/refs`, `/git-upload-pack`, `/git-receive-pack` |
 | Releases | `/api/repos/{owner}/{repo}/releases` (`/latest`, `/{id}`), `/tags`, `/archive/{ref}.tar.gz` |
 | Webhooks | `/api/repos/{owner}/{repo}/webhooks` (`/{id}`, `/{id}/rotate`, `/{id}/deliveries`), `/api/webhook-events` |
+| Search | `GET /api/search?q=...` |
 
 Run `cargo loco routes` to see the live, complete route table.
 

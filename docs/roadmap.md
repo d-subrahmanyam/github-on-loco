@@ -94,7 +94,9 @@ Status legend: ✅ done · 🟡 partial · ⬜ planned.
       Releases tab.
 - [x] Webhooks: admin-managed subscriptions, HMAC-signed queued deliveries with
       retries and a per-webhook delivery history.
-- Remaining: search, notification emails via the mailer + queue.
+- [x] Search: permission-aware global search over repositories, issues and pull
+      requests, with a SPA search page and nav link.
+- Remaining: notification emails via the mailer + queue.
 - Deployment and scaling design is recorded in
   [docs/deployment-architecture.md](deployment-architecture.md): shared git
   storage and split web/worker deploys first, then a modular-monolith boundary

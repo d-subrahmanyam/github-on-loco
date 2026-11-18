@@ -11,6 +11,7 @@ import { releaseRequested } from './releasesSlice'
 import { socialRequested } from './socialSlice'
 import { tokenRequested } from './tokensSlice'
 import { webhookRequested } from './webhooksSlice'
+import { searchRequested } from './searchSlice'
 import { jsonResponse } from '../test/helpers'
 
 describe('repository sagas', () => {
@@ -153,6 +154,35 @@ describe('webhook sagas', () => {
     )
     await vi.waitFor(() => expect(store.getState().webhooks.createdSecret?.secret).toBe('whsec_abc'))
     expect(fetchMock.mock.calls.some((call) => call[1]?.method === 'POST')).toBe(true)
+  })
+})
+
+describe('search sagas', () => {
+  it('loads grouped results and ignores a stale response', async () => {
+    const result = {
+      repositories: [{
+        id: 1,
+        owner: 'alice',
+        name: 'hello',
+        description: null,
+        is_private: false,
+      }],
+      issues: [],
+      pulls: [],
+      total: 1,
+    }
+    const fetchMock = vi.fn(async () => jsonResponse(result))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = createAppStore()
+    store.dispatch(searchRequested({ key: 'old', query: 'old' }))
+    store.dispatch(searchRequested({ key: 'new', query: 'widget' }))
+    await vi.waitFor(() => expect(store.getState().search.result).toEqual(result))
+    expect(store.getState().search.query).toBe('widget')
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/search?q=widget',
+      expect.objectContaining({ method: 'GET' }),
+    )
   })
 })
 

@@ -10,6 +10,7 @@ mod protection;
 mod pulls;
 mod releases;
 mod repositories;
+mod search;
 mod social;
 mod support;
 
