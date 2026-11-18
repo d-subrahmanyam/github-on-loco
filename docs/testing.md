@@ -71,6 +71,12 @@ for obtaining a JWT and building the `Authorization` header.
   answers; request tests for owner-only settings, creating a repo under an org,
   a member gaining and losing git push access as a team grant is added/revoked,
   and a personal repo with the same name not shadowing an org repo.
+- **Webhooks**: model tests for event subscription matching (including the
+  wildcard), validation, secret rotation and delivery status transitions; a
+  deterministic HMAC test; request tests for admin-only settings, masked
+  secrets, duplicate URLs, an end-to-end signed POST to a local HTTP receiver,
+  and the recorded delivery history. Frontend tests cover the saga and the
+  admin-only Webhooks page.
 - **Releases and tags**: model tests for per-repo tag uniqueness, prerelease
   exclusion from `latest`, edits and validation; request tests that publishing
   creates and deleting removes the git tag, that duplicate tags and unsafe names

@@ -98,7 +98,7 @@ pub async fn star(
     let user = users::Model::find_by_pid(&ctx.db, &auth.claims.pid).await?;
     let row = find_repo(&ctx, &owner, &repo, Some(user.id)).await?;
     if stars::ActiveModel::star(&ctx.db, row.id, user.id).await? {
-        events::Entity::record(&ctx.db, row.id, user.id, events::kind::STAR, None).await?;
+        crate::services::events::record(&ctx, row.id, user.id, events::kind::STAR, None).await?;
     }
     format::json(stats(&ctx, row.id, user.id).await?)
 }
@@ -113,7 +113,7 @@ pub async fn unstar(
     let user = users::Model::find_by_pid(&ctx.db, &auth.claims.pid).await?;
     let row = find_repo(&ctx, &owner, &repo, Some(user.id)).await?;
     if stars::Entity::unstar(&ctx.db, row.id, user.id).await? {
-        events::Entity::record(&ctx.db, row.id, user.id, events::kind::UNSTAR, None).await?;
+        crate::services::events::record(&ctx, row.id, user.id, events::kind::UNSTAR, None).await?;
     }
     format::json(stats(&ctx, row.id, user.id).await?)
 }
@@ -128,7 +128,7 @@ pub async fn watch(
     let user = users::Model::find_by_pid(&ctx.db, &auth.claims.pid).await?;
     let row = find_repo(&ctx, &owner, &repo, Some(user.id)).await?;
     if watches::ActiveModel::watch(&ctx.db, row.id, user.id).await? {
-        events::Entity::record(&ctx.db, row.id, user.id, events::kind::WATCH, None).await?;
+        crate::services::events::record(&ctx, row.id, user.id, events::kind::WATCH, None).await?;
     }
     format::json(stats(&ctx, row.id, user.id).await?)
 }
@@ -143,7 +143,7 @@ pub async fn unwatch(
     let user = users::Model::find_by_pid(&ctx.db, &auth.claims.pid).await?;
     let row = find_repo(&ctx, &owner, &repo, Some(user.id)).await?;
     if watches::Entity::unwatch(&ctx.db, row.id, user.id).await? {
-        events::Entity::record(&ctx.db, row.id, user.id, events::kind::UNWATCH, None).await?;
+        crate::services::events::record(&ctx, row.id, user.id, events::kind::UNWATCH, None).await?;
     }
     format::json(stats(&ctx, row.id, user.id).await?)
 }

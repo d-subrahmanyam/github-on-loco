@@ -182,8 +182,8 @@ pub async fn set_review(
         pr_reviews::state::CHANGES_REQUESTED => events::kind::PR_CHANGES_REQUESTED,
         _ => events::kind::PR_REVIEWED,
     };
-    events::Entity::record(
-        &ctx.db,
+    crate::services::events::record(
+        &ctx,
         row.id,
         user.id,
         kind,

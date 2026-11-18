@@ -180,8 +180,8 @@ pub async fn create(
         }
     };
 
-    events::Entity::record(
-        &ctx.db,
+    crate::services::events::record(
+        &ctx,
         row.id,
         user.id,
         events::kind::RELEASE_PUBLISHED,
@@ -217,8 +217,8 @@ pub async fn update(
         params.is_prerelease,
     )
     .await?;
-    events::Entity::record(
-        &ctx.db,
+    crate::services::events::record(
+        &ctx,
         row.id,
         user.id,
         events::kind::RELEASE_UPDATED,
@@ -252,8 +252,8 @@ pub async fn remove(
     if let Err(err) = git.delete_tag(&release.tag_name).await {
         tracing::warn!(%err, tag = %release.tag_name, "release deleted but tag remains");
     }
-    events::Entity::record(
-        &ctx.db,
+    crate::services::events::record(
+        &ctx,
         row.id,
         user.id,
         events::kind::RELEASE_DELETED,
@@ -291,8 +291,8 @@ pub async fn delete_tag(
         let active: releases::ActiveModel = release.into();
         active.delete(&ctx.db).await?;
     }
-    events::Entity::record(
-        &ctx.db,
+    crate::services::events::record(
+        &ctx,
         row.id,
         user.id,
         events::kind::TAG_DELETED,

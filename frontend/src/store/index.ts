@@ -12,6 +12,7 @@ import repositoriesReducer from './repositoriesSlice'
 import rootSaga from './sagas'
 import socialReducer from './socialSlice'
 import tokensReducer from './tokensSlice'
+import webhooksReducer from './webhooksSlice'
 
 /** Build a fresh store with its own saga runtime. Tests use this for isolation. */
 export function createAppStore() {
@@ -29,6 +30,7 @@ export function createAppStore() {
       releases: releasesReducer,
       protection: protectionReducer,
       tokens: tokensReducer,
+      webhooks: webhooksReducer,
     },
     // Saga owns side effects; the default async thunk middleware is not needed.
     middleware: (getDefaultMiddleware) =>

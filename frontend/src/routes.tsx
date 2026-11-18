@@ -21,6 +21,7 @@ import { Repositories } from './pages/Repositories'
 import { Releases } from './pages/Releases'
 import { RepoCode } from './pages/RepoCode'
 import { Tokens } from './pages/Tokens'
+import { Webhooks } from './pages/Webhooks'
 import { RepoLayout } from './pages/RepoLayout'
 // scaffold:imports
 
@@ -58,6 +59,7 @@ export const router = createBrowserRouter([
           { path: 'releases', element: <Releases /> },
           { path: 'collaborators', element: <Collaborators /> },
           { path: 'branch-protection', element: <BranchProtection /> },
+          { path: 'webhooks', element: <Webhooks /> },
           { path: 'activity', element: <RepoActivity /> },
         ],
       },

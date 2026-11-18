@@ -132,8 +132,8 @@ pub async fn create(
         return Err(err);
     }
 
-    events::Entity::record(
-        &ctx.db,
+    crate::services::events::record(
+        &ctx,
         source.id,
         user.id,
         events::kind::FORK,

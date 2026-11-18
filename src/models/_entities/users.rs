@@ -58,6 +58,8 @@ pub enum Relation {
     TeamMembers,
     #[sea_orm(has_many = "super::watches::Entity")]
     Watches,
+    #[sea_orm(has_many = "super::webhooks::Entity")]
+    Webhooks,
 }
 
 impl Related<super::collaborators::Entity> for Entity {
@@ -141,5 +143,11 @@ impl Related<super::team_members::Entity> for Entity {
 impl Related<super::watches::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Watches.def()
+    }
+}
+
+impl Related<super::webhooks::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Webhooks.def()
     }
 }

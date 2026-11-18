@@ -211,8 +211,8 @@ pub async fn create(
         &params.base_ref,
     )
     .await?;
-    events::Entity::record(
-        &ctx.db,
+    crate::services::events::record(
+        &ctx,
         row.id,
         user.id,
         events::kind::PR_OPENED,

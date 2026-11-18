@@ -123,8 +123,8 @@ pub async fn create(
         &params.label_ids,
     )
     .await?;
-    events::Entity::record(
-        &ctx.db,
+    crate::services::events::record(
+        &ctx,
         row.id,
         user.id,
         events::kind::ISSUE_OPENED,
@@ -172,8 +172,8 @@ async fn set_state(
     } else {
         events::kind::ISSUE_REOPENED
     };
-    events::Entity::record(
-        &ctx.db,
+    crate::services::events::record(
+        ctx,
         row.id,
         user.id,
         kind,

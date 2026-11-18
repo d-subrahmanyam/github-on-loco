@@ -60,6 +60,8 @@ pub enum Relation {
     Users,
     #[sea_orm(has_many = "super::watches::Entity")]
     Watches,
+    #[sea_orm(has_many = "super::webhooks::Entity")]
+    Webhooks,
 }
 
 impl Related<super::branch_protection_rules::Entity> for Entity {
@@ -143,5 +145,11 @@ impl Related<super::users::Entity> for Entity {
 impl Related<super::watches::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Watches.def()
+    }
+}
+
+impl Related<super::webhooks::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Webhooks.def()
     }
 }

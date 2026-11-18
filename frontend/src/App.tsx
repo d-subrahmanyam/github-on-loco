@@ -14,6 +14,7 @@ import { socialReset } from './store/socialSlice'
 import { pullsReset } from './store/pullsSlice'
 import { reset as resetRepositories } from './store/repositoriesSlice'
 import { tokensReset } from './store/tokensSlice'
+import { webhooksReset } from './store/webhooksSlice'
 import { button } from './ui'
 
 export function App() {
@@ -37,6 +38,7 @@ export function App() {
     dispatch(protectionReset())
     dispatch(socialReset())
     dispatch(tokensReset())
+    dispatch(webhooksReset())
     navigate('/login', { replace: true })
   }
 

@@ -277,6 +277,11 @@ push decision must be authoritative at request time.
 - **Read models** for the SPA. The gateway can aggregate repo metadata + social
   counts + viewer role into the current `RepoResponse` so the frontend contract
   (and the `ts-rs` bindings) does not change when services split.
+- **Webhook delivery** is already a queue + persisted-delivery pattern. Today
+  the worker POSTs directly; when split, move it behind a dedicated Delivery
+  service with the same `(event_id, webhook)` dedupe and HMAC signing key kept in
+  a secret store. Workers need outbound egress and should run in a separate
+  pool from request-serving processes so a slow endpoint cannot starve the API.
 
 ### Scaling the Git service specifically
 

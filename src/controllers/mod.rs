@@ -19,3 +19,4 @@ pub mod releases;
 pub mod social;
 
 pub mod tokens;
+pub mod webhooks;

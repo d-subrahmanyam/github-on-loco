@@ -60,6 +60,8 @@ impl Hooks for App {
             .add_route(controllers::forks::routes())
             .add_route(controllers::organizations::routes())
             .add_route(controllers::releases::routes())
+            .add_route(controllers::webhooks::routes())
+            .add_route(controllers::webhooks::event_routes())
             .add_route(controllers::git_browse::routes())
             .add_route(controllers::auth::routes())
             .add_route(controllers::repositories::routes())
@@ -68,6 +70,9 @@ impl Hooks for App {
     async fn connect_workers(ctx: &AppContext, queue: &Queue) -> Result<()> {
         queue
             .register(crate::workers::merge_pull_request::Worker::build(ctx))
+            .await?;
+        queue
+            .register(crate::workers::deliver_webhook::Worker::build(ctx))
             .await?;
         queue.register(DownloadWorker::build(ctx)).await?;
         Ok(())

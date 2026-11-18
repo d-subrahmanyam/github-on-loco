@@ -12,6 +12,7 @@ import {
   FaRegEye,
   FaRegStar,
   FaShieldAlt,
+  FaPlug,
   FaStar,
   FaUsers,
 } from 'react-icons/fa'
@@ -230,6 +231,9 @@ export function RepoLayout() {
               </NavLink>
               <NavLink to="branch-protection" className={tabClass}>
                 <FaShieldAlt /> Branch protection
+              </NavLink>
+              <NavLink to="webhooks" className={tabClass}>
+                <FaPlug /> Webhooks
               </NavLink>
             </>
           )}

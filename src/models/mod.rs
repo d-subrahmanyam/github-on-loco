@@ -29,3 +29,5 @@ pub mod team_repositories;
 pub mod teams;
 pub mod users;
 pub mod watches;
+pub mod webhook_deliveries;
+pub mod webhooks;

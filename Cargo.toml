@@ -41,6 +41,10 @@ ts-rs = { version = "12", features = ["chrono-impl", "serde-compat"] }
 include_dir = { version = "0.7" }
 axum-extra = { version = "0.10", features = ["form"] }
 base64 = { version = "0.21" }
+hmac = "0.13.0"
+sha2 = "0.11.1"
+hex = "0.4.3"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 
 [[bin]]
 name = "github_loco-cli"

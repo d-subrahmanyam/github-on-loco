@@ -90,8 +90,8 @@ pub async fn add(
         return bad_request("the repository owner already has every permission");
     }
     let grant = collaborators::ActiveModel::add(&ctx.db, row.id, invited.id, &params.role).await?;
-    events::Entity::record(
-        &ctx.db,
+    crate::services::events::record(
+        &ctx,
         row.id,
         user.id,
         events::kind::COLLABORATOR_ADDED,
@@ -144,8 +144,8 @@ pub async fn remove(
         .map(|user| user.username)
         .unwrap_or_else(|| "unknown".to_owned());
     collaborators::Entity::remove(&ctx.db, row.id, user_id).await?;
-    events::Entity::record(
-        &ctx.db,
+    crate::services::events::record(
+        &ctx,
         row.id,
         user.id,
         events::kind::COLLABORATOR_REMOVED,

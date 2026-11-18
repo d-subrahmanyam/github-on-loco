@@ -435,9 +435,14 @@ async fn receive_pack(
     // Best-effort activity record; a failed event must not fail a push.
     if let Ok(actor) = users::Model::find_by_username(&ctx.db, &login).await {
         let payload = json!({ "branch": branch });
-        let _ =
-            events::Entity::record(&ctx.db, row.id, actor.id, events::kind::PUSH, Some(payload))
-                .await;
+        let _ = crate::services::events::record(
+            &ctx,
+            row.id,
+            actor.id,
+            events::kind::PUSH,
+            Some(payload),
+        )
+        .await;
     }
     invalidate_repo_cache(&ctx, &owner, &repo).await;
     sync_pull_request_heads(&ctx, &owner, &repo).await;

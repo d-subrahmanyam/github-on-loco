@@ -12,6 +12,7 @@ import { releasesApi } from '../api/releases'
 import { repositoriesApi } from '../api/repositories'
 import { socialApi } from '../api/social'
 import { tokensApi } from '../api/tokens'
+import { webhooksApi } from '../api/webhooks'
 import type { AddCommentParams } from '../bindings/AddCommentParams'
 import type { AddOrgMemberParams } from '../bindings/AddOrgMemberParams'
 import type { AddReviewCommentParams } from '../bindings/AddReviewCommentParams'
@@ -24,10 +25,12 @@ import type { CreateReleaseParams } from '../bindings/CreateReleaseParams'
 import type { CreateLabelParams } from '../bindings/CreateLabelParams'
 import type { CreateRepoParams } from '../bindings/CreateRepoParams'
 import type { CreateTokenParams } from '../bindings/CreateTokenParams'
+import type { CreateWebhookParams } from '../bindings/CreateWebhookParams'
 import type { RepoResponse } from '../bindings/RepoResponse'
 import type { SetBranchProtectionParams } from '../bindings/SetBranchProtectionParams'
 import type { SetReviewParams } from '../bindings/SetReviewParams'
 import type { UpdateReleaseParams } from '../bindings/UpdateReleaseParams'
+import type { UpdateWebhookParams } from '../bindings/UpdateWebhookParams'
 import {
   browseFailed,
   browseRequested,
@@ -88,6 +91,12 @@ import {
   tokenSucceeded,
   type TokenRequest,
 } from './tokensSlice'
+import {
+  webhookFailed,
+  webhookRequested,
+  webhookSucceeded,
+  type WebhookRequest,
+} from './webhooksSlice'
 import {
   createFailed,
   createRequested,
@@ -170,6 +179,68 @@ function* fetchFork(action: PayloadAction<ForkRequest>): SagaIterator {
     yield put(forkSucceeded({ part, key, data }))
   } catch (err) {
     yield put(forkFailed({ part, key, error: errorMessage(err) }))
+  }
+}
+
+function* fetchWebhook(action: PayloadAction<WebhookRequest>): SagaIterator {
+  const { part, key, owner, name, id = 0, deliveryId = 0, params } = action.payload
+  try {
+    let data: unknown
+    switch (part) {
+      case 'kinds':
+        data = yield call(webhooksApi.eventKinds)
+        break
+      case 'list':
+        data = yield call(webhooksApi.list, owner, name)
+        break
+      case 'create':
+        data = yield call(webhooksApi.create, owner, name, params as CreateWebhookParams)
+        break
+      case 'update':
+        data = yield call(webhooksApi.update, owner, name, id, params as UpdateWebhookParams)
+        break
+      case 'remove':
+        yield call(webhooksApi.remove, owner, name, id)
+        data = id
+        break
+      case 'rotate': {
+        const result = yield call(webhooksApi.rotate, owner, name, id)
+        data = { id, secret: result.secret }
+        break
+      }
+      case 'deliveries':
+        data = { id, items: yield call(webhooksApi.deliveries, owner, name, id) }
+        break
+      case 'retry':
+        yield call(webhooksApi.retry, owner, name, id, deliveryId)
+        data = undefined
+        break
+    }
+    yield put(webhookSucceeded({ part, key, data }))
+
+    if (['create', 'update', 'remove', 'rotate', 'retry'].includes(part)) {
+      yield put(
+        webhookRequested({
+          part: 'list',
+          key: `webhooks:${owner}/${name}`,
+          owner,
+          name,
+        }),
+      )
+    }
+    if (part === 'retry') {
+      yield put(
+        webhookRequested({
+          part: 'deliveries',
+          key: `deliveries:${owner}/${name}:${id}`,
+          owner,
+          name,
+          id,
+        }),
+      )
+    }
+  } catch (err) {
+    yield put(webhookFailed({ part, key, error: errorMessage(err) }))
   }
 }
 
@@ -675,6 +746,7 @@ export default function* rootSaga(): SagaIterator {
     // stale responses are dropped by the key stored in issuesSlice.
     takeEvery(forkRequested.type, fetchFork),
     takeEvery(releaseRequested.type, fetchRelease),
+    takeEvery(webhookRequested.type, fetchWebhook),
     takeEvery(orgRequested.type, fetchOrg),
     takeEvery(issueRequested.type, fetchIssue),
     takeEvery(pullRequested.type, fetchPull),

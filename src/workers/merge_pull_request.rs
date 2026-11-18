@@ -79,8 +79,8 @@ impl BackgroundWorker<WorkerArgs> for Worker {
             ..Default::default()
         };
         active.mark_merged(&self.ctx.db, &commit).await?;
-        events::Entity::record(
-            &self.ctx.db,
+        crate::services::events::record(
+            &self.ctx,
             repo.id,
             args.actor_id,
             events::kind::PR_MERGED,

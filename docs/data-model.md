@@ -161,6 +161,22 @@ the orphan tag can still be deleted from the Tags list. Tags without a release
 can be created directly in git and deleted through the API. Source archives are
 streamed from `git archive`, not stored.
 
+### `webhooks`, `webhook_deliveries` (Phase 5)
+
+| Table | Columns |
+|---|---|
+| `webhooks` | `repository_id` → `repositories.id`, `url` (text), `events` (comma-separated event kinds or `*`), `secret`, `is_active`, `created_by` → `users.id` — `unique(repository_id, url)` |
+| `webhook_deliveries` | `webhook_id` → `webhooks.id`, `event`, `payload` (text JSON), `status` (`pending`/`success`/`failed`), `attempts`, `last_error` (nullable), `delivered_at` (nullable) |
+
+Only repo admins may manage webhooks. `services::events::record` appends the
+activity event and then fans it out to active subscriptions (best-effort: a
+webhook failure never fails the originating request). Each matching event
+creates a delivery row and enqueues the `DeliverWebhook` worker, which POSTs the
+JSON payload with `X-GitHub-Event`, `X-GitHub-Delivery` and a
+`X-Hub-Signature-256` HMAC of the raw body. Non-2xx responses and transport
+errors mark the row failed and return `Err` so the queue retries (max 3); the
+SPA can retry manually and rotate the signing secret.
+
 ### `branch_protection_rules`, `pr_reviews` (Phase 4)
 
 | Table | Columns |

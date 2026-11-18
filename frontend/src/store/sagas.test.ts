@@ -10,6 +10,7 @@ import { pullRequested } from './pullsSlice'
 import { releaseRequested } from './releasesSlice'
 import { socialRequested } from './socialSlice'
 import { tokenRequested } from './tokensSlice'
+import { webhookRequested } from './webhooksSlice'
 import { jsonResponse } from '../test/helpers'
 
 describe('repository sagas', () => {
@@ -112,6 +113,45 @@ describe('release sagas', () => {
       }),
     )
     await vi.waitFor(() => expect(store.getState().releases.current?.id).toBe(1))
+    expect(fetchMock.mock.calls.some((call) => call[1]?.method === 'POST')).toBe(true)
+  })
+})
+
+describe('webhook sagas', () => {
+  const hook = {
+    id: 1,
+    url: 'https://example.com/hook',
+    events: 'star',
+    is_active: true,
+    created_by: 'alice',
+    secret: 'whsec_abc',
+  }
+
+  it('loads webhooks and kinds, then refreshes after a create', async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(_input)
+      if (url.endsWith('/webhook-events')) return jsonResponse(['star', 'push'])
+      if (init?.method === 'POST') return jsonResponse(hook)
+      return jsonResponse([hook])
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = createAppStore()
+    const base = { owner: 'alice', name: 'hello' }
+    store.dispatch(webhookRequested({ part: 'list', key: 'webhooks:alice/hello', ...base }))
+    store.dispatch(webhookRequested({ part: 'kinds', key: 'kinds', ...base }))
+    await vi.waitFor(() => expect(store.getState().webhooks.webhooks).toEqual([hook]))
+    expect(store.getState().webhooks.kinds).toEqual(['star', 'push'])
+
+    store.dispatch(
+      webhookRequested({
+        part: 'create',
+        key: 'create-hook',
+        ...base,
+        params: { url: hook.url, events: 'star' },
+      }),
+    )
+    await vi.waitFor(() => expect(store.getState().webhooks.createdSecret?.secret).toBe('whsec_abc'))
     expect(fetchMock.mock.calls.some((call) => call[1]?.method === 'POST')).toBe(true)
   })
 })

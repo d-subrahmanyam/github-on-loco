@@ -24,3 +24,5 @@ pub use super::team_repositories::Entity as TeamRepositories;
 pub use super::teams::Entity as Teams;
 pub use super::users::Entity as Users;
 pub use super::watches::Entity as Watches;
+pub use super::webhook_deliveries::Entity as WebhookDeliveries;
+pub use super::webhooks::Entity as Webhooks;

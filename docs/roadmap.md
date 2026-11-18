@@ -92,7 +92,9 @@ Status legend: ✅ done · 🟡 partial · ⬜ planned.
 - [x] Releases and tags: release metadata in Postgres, compare-and-swap git tags,
       `latest` release lookup, loose-tag management, source archives and an SPA
       Releases tab.
-- Remaining: search, notification emails via the mailer + queue, webhooks.
+- [x] Webhooks: admin-managed subscriptions, HMAC-signed queued deliveries with
+      retries and a per-webhook delivery history.
+- Remaining: search, notification emails via the mailer + queue.
 - Deployment and scaling design is recorded in
   [docs/deployment-architecture.md](deployment-architecture.md): shared git
   storage and split web/worker deploys first, then a modular-monolith boundary
