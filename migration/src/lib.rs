@@ -36,6 +36,7 @@ mod m20261118_022831_add_organization_to_repositories;
 mod m20261118_140850_releases;
 mod m20261118_144234_webhooks;
 mod m20261118_144319_webhook_deliveries;
+mod m20261118_165708_notifications;
 pub struct Migrator;
 
 #[async_trait::async_trait]
@@ -70,6 +71,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20261118_140850_releases::Migration),
             Box::new(m20261118_144234_webhooks::Migration),
             Box::new(m20261118_144319_webhook_deliveries::Migration),
+            Box::new(m20261118_165708_notifications::Migration),
             // inject-above (do not remove this comment)
         ]
     }

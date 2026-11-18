@@ -122,6 +122,9 @@ database:
 
 settings:
   repo_base_dir: '<%= get_env(name="REPO_BASE_DIR") %>'
+  notifications:
+    enabled: <%= get_env(name="NOTIFICATIONS_ENABLED", default="false") %>
+    channels: ['email']
 
 # Authentication Configuration
 auth:

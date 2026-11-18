@@ -38,6 +38,8 @@ pub enum Relation {
     IssueComments,
     #[sea_orm(has_many = "super::issues::Entity")]
     Issues,
+    #[sea_orm(has_many = "super::notifications::Entity")]
+    Notifications,
     #[sea_orm(has_many = "super::org_members::Entity")]
     OrgMembers,
     #[sea_orm(has_many = "super::personal_access_tokens::Entity")]
@@ -83,6 +85,12 @@ impl Related<super::issue_comments::Entity> for Entity {
 impl Related<super::issues::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Issues.def()
+    }
+}
+
+impl Related<super::notifications::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Notifications.def()
     }
 }
 

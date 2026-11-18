@@ -1,10 +1,11 @@
-import { FaKey, FaSearch, FaSignOutAlt } from 'react-icons/fa'
+import { FaBell, FaKey, FaSearch, FaSignOutAlt } from 'react-icons/fa'
 import { useSyncExternalStore } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router'
 import { clearToken, getTokenSnapshot, subscribeToken } from './auth/token'
 import { browseReset } from './store/browseSlice'
 import { useAppDispatch } from './store/hooks'
 import { issuesReset } from './store/issuesSlice'
+import { notificationsReset } from './store/notificationsSlice'
 import { organizationsReset } from './store/organizationsSlice'
 import { collaboratorsReset } from './store/collaboratorsSlice'
 import { forksReset } from './store/forksSlice'
@@ -32,6 +33,7 @@ export function App() {
     dispatch(resetRepositories())
     dispatch(issuesReset())
     dispatch(organizationsReset())
+    dispatch(notificationsReset())
     dispatch(pullsReset())
     dispatch(collaboratorsReset())
     dispatch(forksReset())
@@ -71,6 +73,11 @@ export function App() {
             {isAuthenticated && (
               <Link to="/organizations" className="text-slate-300 hover:text-white">
                 Organizations
+              </Link>
+            )}
+            {isAuthenticated && (
+              <Link to="/notifications" className="inline-flex items-center gap-1 text-slate-300 hover:text-white">
+                <FaBell /> Notifications
               </Link>
             )}
             {isAuthenticated && (

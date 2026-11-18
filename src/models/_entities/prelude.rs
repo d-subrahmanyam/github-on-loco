@@ -10,6 +10,7 @@ pub use super::issue_comments::Entity as IssueComments;
 pub use super::issue_labels::Entity as IssueLabels;
 pub use super::issues::Entity as Issues;
 pub use super::labels::Entity as Labels;
+pub use super::notifications::Entity as Notifications;
 pub use super::org_members::Entity as OrgMembers;
 pub use super::organizations::Entity as Organizations;
 pub use super::personal_access_tokens::Entity as PersonalAccessTokens;

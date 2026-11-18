@@ -12,6 +12,7 @@ pub mod git_http;
 pub mod repositories;
 
 pub mod issues;
+pub mod notifications;
 pub mod organizations;
 pub mod protection;
 pub mod pulls;

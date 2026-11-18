@@ -13,6 +13,7 @@ these files are the contract.
 | [design-practices.md](design-practices.md) | The conventions every change must follow, plus a review checklist |
 | [git-transport.md](git-transport.md) | How clone/fetch/push work, and how authentication is handled |
 | [pull-request-workflow.md](pull-request-workflow.md) | Step-by-step guide for users: token, clone, branch, push, open a PR, review and merge |
+| [notification-channels.md](notification-channels.md) | Feature flag, built-in channels, and how to add Slack/Teams/PagerDuty |
 | [jenkins-webhook-integration.md](jenkins-webhook-integration.md) | Local Docker/K3s harness for driving a Jenkins pipeline from PR webhooks, including HMAC verification |
 | [roadmap.md](roadmap.md) | Phased plan from starter to a useful GitHub-like product, with status |
 | [testing.md](testing.md) | Test layers, how to run them, and what is covered today |
@@ -49,6 +50,8 @@ product:
 - organizations and teams: org-owned repositories, membership roles, teams and
   per-team repo grants folded into the one `can()` rule
   (`models/organizations.rs`, `models/team_*`, `controllers/organizations.rs`);
+- feature-flagged notifications with a pluggable channel registry
+  (`notifications/`, `services/notifications.rs`, `workers/deliver_notification.rs`);
 - permission-aware global search over repositories, issues and pull requests
   (`controllers/search.rs`, `frontend/src/pages/Search.tsx`);
 - webhooks: admin-managed subscriptions, HMAC-signed deliveries retried through

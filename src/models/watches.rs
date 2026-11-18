@@ -24,6 +24,21 @@ impl Entity {
             .is_some())
     }
 
+    /// Ids of every user watching a repository, oldest watch first.
+    ///
+    /// # Errors
+    /// Returns a database error if the query fails.
+    pub async fn watcher_ids(db: &DatabaseConnection, repository_id: i64) -> Result<Vec<i64>> {
+        Ok(Entity::find()
+            .filter(Column::RepositoryId.eq(repository_id))
+            .order_by_asc(Column::Id)
+            .all(db)
+            .await?
+            .into_iter()
+            .map(|row| row.user_id)
+            .collect())
+    }
+
     /// Number of watchers on a repository.
     ///
     /// # Errors

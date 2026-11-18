@@ -10,6 +10,7 @@ import { pullRequested } from './pullsSlice'
 import { releaseRequested } from './releasesSlice'
 import { socialRequested } from './socialSlice'
 import { tokenRequested } from './tokensSlice'
+import { notificationRequested } from './notificationsSlice'
 import { webhookRequested } from './webhooksSlice'
 import { searchRequested } from './searchSlice'
 import { jsonResponse } from '../test/helpers'
@@ -183,6 +184,34 @@ describe('search sagas', () => {
       '/api/search?q=widget',
       expect.objectContaining({ method: 'GET' }),
     )
+  })
+})
+
+describe('notification sagas', () => {
+  it('loads the delivery history and flag settings', async () => {
+    const item = {
+      id: 1,
+      event: 'star',
+      title: 'New activity in alice/hello',
+      body: 'bob triggered `star`.',
+      channel: 'log',
+      status: 'sent',
+      attempts: 1,
+      created_at: '2026-01-01T00:00:00Z',
+      delivered_at: '2026-01-01T00:00:01Z',
+    }
+    const settings = { enabled: false, channels: ['email'], available: ['email', 'log'] }
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith('/settings')) return jsonResponse(settings)
+      return jsonResponse([item])
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const store = createAppStore()
+    store.dispatch(notificationRequested({ part: 'list', key: 'list' }))
+    store.dispatch(notificationRequested({ part: 'settings', key: 'settings' }))
+    await vi.waitFor(() => expect(store.getState().notifications.items).toEqual([item]))
+    expect(store.getState().notifications.settings).toEqual(settings)
   })
 })
 

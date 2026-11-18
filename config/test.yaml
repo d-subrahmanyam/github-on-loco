@@ -101,6 +101,11 @@ database:
 
 settings:
   repo_base_dir: '<%= get_env(name="REPO_BASE_DIR", default="/home/subbu/var/repos") %>'
+  # Tests opt in with NOTIFICATIONS_ENABLED=true. The log channel is used so
+  # the suite never needs an SMTP server.
+  notifications:
+    enabled: <%= get_env(name="NOTIFICATIONS_ENABLED", default="false") %>
+    channels: ['log']
 
 # Authentication Configuration
 auth:

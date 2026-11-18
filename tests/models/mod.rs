@@ -48,3 +48,5 @@ mod team_repositories;
 mod webhooks;
 
 mod webhook_deliveries;
+
+mod notifications;

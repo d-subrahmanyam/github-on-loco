@@ -177,6 +177,21 @@ JSON payload with `X-GitHub-Event`, `X-GitHub-Delivery` and a
 errors mark the row failed and return `Err` so the queue retries (max 3); the
 SPA can retry manually and rotate the signing secret.
 
+### `notifications` (Phase 5)
+
+| Column | Notes |
+|---|---|
+| `id`, `created_at`, `updated_at` | standard |
+| `user_id` → `users.id` | recipient |
+| `repository_id` → `repositories.id` | source repository |
+| `event`, `title`, `body` | display-ready copy built from the event |
+| `channel` | registry name (`email`, `log`, later `slack`, …) |
+| `status` | `pending` / `sent` / `failed` |
+| `attempts`, `last_error` (nullable), `delivered_at` (nullable) | delivery bookkeeping |
+
+One row is created per (watcher, channel) when `settings.notifications.enabled`
+is true. The activity event and webhook dispatch are independent of this table.
+
 ### `branch_protection_rules`, `pr_reviews` (Phase 4)
 
 | Table | Columns |

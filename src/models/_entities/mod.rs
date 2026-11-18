@@ -12,6 +12,7 @@ pub mod issue_comments;
 pub mod issue_labels;
 pub mod issues;
 pub mod labels;
+pub mod notifications;
 pub mod org_members;
 pub mod organizations;
 pub mod personal_access_tokens;

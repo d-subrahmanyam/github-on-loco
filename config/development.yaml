@@ -112,6 +112,11 @@ database:
 
 settings:
   repo_base_dir: '<%= get_env(name="REPO_BASE_DIR", default="/home/subbu/var/repos") %>'
+  # Notifications are off by default: no SMTP/Slack/Teams credentials needed.
+  # Flip `enabled` to true and pick channel names to start fan-out.
+  notifications:
+    enabled: false
+    channels: ['email']
 
 # Authentication Configuration
 auth:

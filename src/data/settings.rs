@@ -10,6 +10,32 @@ use serde::Deserialize;
 #[derive(Debug, Clone, Deserialize)]
 pub struct AppSettings {
     pub repo_base_dir: String,
+    /// Feature-flagged notification fan-out. Disabled by default so no mail
+    /// server or third-party credentials are needed to run the app.
+    #[serde(default)]
+    pub notifications: NotificationSettings,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct NotificationSettings {
+    #[serde(default)]
+    pub enabled: bool,
+    /// Names resolved against the notification channel registry.
+    #[serde(default = "default_channels")]
+    pub channels: Vec<String>,
+}
+
+fn default_channels() -> Vec<String> {
+    vec!["email".to_owned()]
+}
+
+impl Default for NotificationSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            channels: default_channels(),
+        }
+    }
 }
 
 impl AppSettings {

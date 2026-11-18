@@ -11,6 +11,7 @@ import { CommitDetail } from './pages/CommitDetail'
 import { Forks } from './pages/Forks'
 import { Commits } from './pages/Commits'
 import { Home } from './pages/Home'
+import { Notifications } from './pages/Notifications'
 import { Organizations } from './pages/Organizations'
 import { IssueDetail } from './pages/IssueDetail'
 import { IssueList } from './pages/IssueList'
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
           // scaffold:routes
           { path: 'dashboard', element: <Repositories /> },
           { path: 'organizations', element: <Organizations /> },
+          { path: 'notifications', element: <Notifications /> },
           { path: 'organizations/:handle', element: <OrganizationDetail /> },
           { path: 'tokens', element: <Tokens /> },
         ],

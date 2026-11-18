@@ -4,6 +4,7 @@ mod forks;
 mod git_browse;
 mod git_http;
 mod issues;
+mod notifications;
 mod organizations;
 mod prepare_data;
 mod protection;

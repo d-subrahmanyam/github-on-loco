@@ -71,6 +71,11 @@ for obtaining a JWT and building the `Authorization` header.
   answers; request tests for owner-only settings, creating a repo under an org,
   a member gaining and losing git push access as a team grant is added/revoked,
   and a personal repo with the same name not shadowing an org repo.
+- **Notifications**: a registry unit test registers a fake channel and proves
+  lookup by name; model tests cover per-recipient rows and status transitions;
+  request tests prove the flag-off path creates nothing and the flag-on path
+  fans out to watchers (excluding the actor) through the configured channel.
+  Frontend tests cover the saga and the settings/history page.
 - **Search**: a request test proves that anonymous and stranger searches see
   only public repositories and their issues/PRs, while the owner also sees
   private matches; it also checks case-insensitivity, short-query validation

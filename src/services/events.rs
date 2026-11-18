@@ -8,7 +8,7 @@ use loco_rs::prelude::*;
 use serde_json::Value;
 
 use crate::models::events;
-use crate::services::webhooks;
+use crate::services::{notifications, webhooks};
 
 /// Appends the event, then queues matching webhook deliveries.
 ///
@@ -25,6 +25,11 @@ pub async fn record(
     if let Err(err) = webhooks::dispatch(ctx, repository_id, kind, actor_id, payload.as_ref()).await
     {
         tracing::warn!(%err, event = kind, "webhook dispatch failed");
+    }
+    if let Err(err) =
+        notifications::dispatch(ctx, repository_id, kind, actor_id, payload.as_ref()).await
+    {
+        tracing::warn!(%err, event = kind, "notification dispatch failed");
     }
     Ok(())
 }

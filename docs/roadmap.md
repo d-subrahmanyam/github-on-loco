@@ -96,7 +96,13 @@ Status legend: ✅ done · 🟡 partial · ⬜ planned.
       retries and a per-webhook delivery history.
 - [x] Search: permission-aware global search over repositories, issues and pull
       requests, with a SPA search page and nav link.
-- Remaining: notification emails via the mailer + queue.
+- [x] Notification emails via the mailer + queue, behind a feature flag and
+      a pluggable channel registry (`log` and `email` built in); see
+      [notification-channels.md](notification-channels.md) for adding Slack,
+      Teams or PagerDuty later.
+- Phase 5 status: complete ✅ (shared git storage, split deploys and the
+  observability work described in the deployment doc remain future
+  infrastructure concerns).
 - Deployment and scaling design is recorded in
   [docs/deployment-architecture.md](deployment-architecture.md): shared git
   storage and split web/worker deploys first, then a modular-monolith boundary

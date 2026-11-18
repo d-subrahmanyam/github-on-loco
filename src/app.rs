@@ -63,6 +63,7 @@ impl Hooks for App {
             .add_route(controllers::webhooks::routes())
             .add_route(controllers::webhooks::event_routes())
             .add_route(controllers::search::routes())
+            .add_route(controllers::notifications::routes())
             .add_route(controllers::git_browse::routes())
             .add_route(controllers::auth::routes())
             .add_route(controllers::repositories::routes())
@@ -74,6 +75,9 @@ impl Hooks for App {
             .await?;
         queue
             .register(crate::workers::deliver_webhook::Worker::build(ctx))
+            .await?;
+        queue
+            .register(crate::workers::deliver_notification::Worker::build(ctx))
             .await?;
         queue.register(DownloadWorker::build(ctx)).await?;
         Ok(())

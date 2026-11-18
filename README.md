@@ -38,6 +38,9 @@ end-to-end slice of that product.
 - **Organizations and teams** — repositories can be owned by an organization.
   Owners manage teams, and a team's per-repo role feeds the same authorization
   rule used by REST and git push.
+- **Notifications** — feature-flagged, pluggable delivery to watchers. Email
+  uses the built-in mailer; a `log` channel is available for local testing and
+  new providers (Slack, Teams, PagerDuty) are one trait implementation away.
 - **Search** — a global, permission-aware search over repositories, issues and
   pull requests. Private repositories are invisible to users without a grant.
 - **Webhooks** — repository admins can subscribe to activity events. Deliveries
@@ -126,6 +129,7 @@ The development config uses a clearly-labelled dev-only base64 value.
 | Releases | `/api/repos/{owner}/{repo}/releases` (`/latest`, `/{id}`), `/tags`, `/archive/{ref}.tar.gz` |
 | Webhooks | `/api/repos/{owner}/{repo}/webhooks` (`/{id}`, `/{id}/rotate`, `/{id}/deliveries`), `/api/webhook-events` |
 | Search | `GET /api/search?q=...` |
+| Notifications | `GET /api/notifications`, `/api/notifications/settings` |
 
 Run `cargo loco routes` to see the live, complete route table.
 

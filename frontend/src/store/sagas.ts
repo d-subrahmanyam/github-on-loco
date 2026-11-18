@@ -5,6 +5,7 @@ import { ApiClientError } from '../api/client'
 import { collaboratorsApi } from '../api/collaborators'
 import { forksApi } from '../api/forks'
 import { issuesApi } from '../api/issues'
+import { notificationsApi } from '../api/notifications'
 import { organizationsApi } from '../api/organizations'
 import { protectionApi } from '../api/protection'
 import { pullsApi } from '../api/pulls'
@@ -57,6 +58,12 @@ import {
   issueSucceeded,
   type IssueRequest,
 } from './issuesSlice'
+import {
+  notificationFailed,
+  notificationRequested,
+  notificationSucceeded,
+  type NotificationRequest,
+} from './notificationsSlice'
 import {
   orgFailed,
   orgRequested,
@@ -187,6 +194,19 @@ function* fetchFork(action: PayloadAction<ForkRequest>): SagaIterator {
     yield put(forkSucceeded({ part, key, data }))
   } catch (err) {
     yield put(forkFailed({ part, key, error: errorMessage(err) }))
+  }
+}
+
+function* fetchNotifications(action: PayloadAction<NotificationRequest>): SagaIterator {
+  const { part, key } = action.payload
+  try {
+    const data =
+      part === 'list'
+        ? yield call(notificationsApi.list)
+        : yield call(notificationsApi.settings)
+    yield put(notificationSucceeded({ part, key, data }))
+  } catch (err) {
+    yield put(notificationFailed({ part, key, error: errorMessage(err) }))
   }
 }
 
@@ -766,6 +786,7 @@ export default function* rootSaga(): SagaIterator {
     takeEvery(releaseRequested.type, fetchRelease),
     takeEvery(webhookRequested.type, fetchWebhook),
     takeEvery(searchRequested.type, fetchSearch),
+    takeEvery(notificationRequested.type, fetchNotifications),
     takeEvery(orgRequested.type, fetchOrg),
     takeEvery(issueRequested.type, fetchIssue),
     takeEvery(pullRequested.type, fetchPull),
