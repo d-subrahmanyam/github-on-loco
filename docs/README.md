@@ -24,7 +24,9 @@ product:
 - JWT auth, email verification, password reset and magic links (`controllers/auth.rs`);
 - `users` with a unique public `username` handle (`models/users.rs`);
 - create/list repositories, each with a bare git repo on disk
-  (`controllers/repositories.rs`, `models/repositories.rs`);
+  (`controllers/repositories.rs`, `models/repositories.rs`). Creation refuses to
+  reuse an existing bare repo, and `cargo loco task dev:reset` clears Postgres,
+  git storage and the fixture users together;
 - clone/fetch/push over git smart HTTP (`controllers/git_http.rs`);
 - personal access tokens for git authentication (`models/personal_access_tokens.rs`);
 - read-only code browsing — branches, commits, tree, raw files

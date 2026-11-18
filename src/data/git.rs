@@ -39,6 +39,42 @@ pub fn is_safe_path(path: &str) -> bool {
     !path.starts_with('/') && !path.contains("..") && !path.contains('\0') && !path.contains("://")
 }
 
+/// Whether `path` is an initialized bare git repository.
+///
+/// Checks the three markers `git init --bare` writes, so an empty or partially
+/// created directory is not mistaken for a repository with real history.
+#[must_use]
+pub fn is_bare_repo(path: &Path) -> bool {
+    path.join("HEAD").is_file() && path.join("objects").is_dir() && path.join("refs").is_dir()
+}
+
+/// Deletes all git repositories under `base`, leaving an empty directory.
+///
+/// Development resets must clear this directory as well as Postgres: git is
+/// the source of truth for content, so orphaned bare repos left on disk can be
+/// silently reattached when a metadata row is recreated with the same name.
+/// Refuses an empty, relative or root-like base to avoid wiping unrelated data.
+///
+/// # Errors
+/// Returns an error for an unsafe base path or a filesystem failure.
+pub async fn clear_repo_storage(base: &str) -> Result<()> {
+    let path = Path::new(base);
+    if base.trim().is_empty() || !path.is_absolute() || path.components().count() < 3 {
+        return Err(Error::string(&format!(
+            "refusing to clear unsafe repo_base_dir: {base}"
+        )));
+    }
+    if path.exists() {
+        tokio::fs::remove_dir_all(path)
+            .await
+            .map_err(|e| Error::string(&format!("failed to clear git storage: {e}")))?;
+    }
+    tokio::fs::create_dir_all(path)
+        .await
+        .map_err(|e| Error::string(&format!("failed to recreate git storage: {e}")))?;
+    Ok(())
+}
+
 /// An open handle to one bare repository.
 #[derive(Clone, Debug)]
 pub struct GitRepo {
@@ -515,6 +551,47 @@ fn parse_patches(text: &str) -> BTreeMap<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn unique_temp_dir(name: &str) -> PathBuf {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        std::env::temp_dir().join(format!("github-loco-{name}-{nanos}"))
+    }
+
+    #[test]
+    fn detects_only_initialized_bare_repositories() {
+        let path = unique_temp_dir("bare-repo");
+        assert!(!is_bare_repo(&path), "a missing directory is not a repo");
+
+        std::fs::create_dir_all(path.join("objects")).unwrap();
+        std::fs::create_dir_all(path.join("refs")).unwrap();
+        assert!(!is_bare_repo(&path), "missing HEAD is not a repo");
+
+        std::fs::write(path.join("HEAD"), b"ref: refs/heads/master\n").unwrap();
+        assert!(is_bare_repo(&path));
+
+        std::fs::remove_dir_all(&path).unwrap();
+    }
+
+    #[tokio::test]
+    async fn clear_repo_storage_removes_git_data_and_refuses_unsafe_paths() {
+        let base = unique_temp_dir("clear-storage");
+        let nested = base.join("subbu").join("hello-world.git");
+        std::fs::create_dir_all(nested.join("objects")).unwrap();
+        std::fs::create_dir_all(nested.join("refs")).unwrap();
+        std::fs::write(nested.join("HEAD"), b"ref: refs/heads/master\n").unwrap();
+        assert!(is_bare_repo(&nested));
+
+        clear_repo_storage(base.to_str().unwrap()).await.unwrap();
+        assert!(base.is_dir(), "the base directory is recreated empty");
+        assert_eq!(std::fs::read_dir(&base).unwrap().count(), 0);
+
+        assert!(clear_repo_storage("").await.is_err());
+        assert!(clear_repo_storage("relative/path").await.is_err());
+        assert!(clear_repo_storage("/").await.is_err());
+    }
 
     #[test]
     fn safe_revisions_are_accepted() {

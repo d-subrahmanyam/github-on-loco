@@ -124,6 +124,7 @@ storage — that is a Phase 5/6 concern, documented in [roadmap.md](roadmap.md).
 | Git auth | PAT (with password fallback in dev), authorized via `can` | JWT cannot travel in a git remote; collaborators must be able to push too |
 | Public handle | new `username` column | `name` is display text and was not unique |
 | Repo create atomicity | roll back the DB row on git failure | Keeps metadata and disk in step without a distributed transaction |
+| Orphaned git data | refuse to `git init` over an existing bare repo (409) | Loco resets only Postgres, not `REPO_BASE_DIR`. Legacy commits would otherwise be silently reattached to a fresh metadata row. `dev:reset` clears both stores together |
 | Authorization | `repositories::Model::can(user, action)` | One rule for REST, git transport and every feature; wrappers only add names for common actions |
 | Activity | append-only `events` log with small display payloads | Git and the domain tables stay authoritative; the feed can be stale without being wrong |
 | Repository ownership | `organization_id` is the single owner-kind switch | `user_id` stays as the creator for audit; every path, git-auth and `can()` decision reads `organization_id` so a personal repo cannot shadow an org repo with the same name |

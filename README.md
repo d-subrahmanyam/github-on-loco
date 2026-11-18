@@ -95,6 +95,11 @@ The production-style build serves the SPA from Loco: run `pnpm build` in
 `frontend/` and `cargo loco start`; `frontend/dist` is served with an SPA
 fallback (see the static middleware in `config/development.yaml`).
 
+To wipe development state, use `cargo loco task dev:reset` rather than
+`cargo loco db reset`. Loco's reset only touches Postgres, while git content
+lives under `REPO_BASE_DIR`; the task clears both and re-seeds the fixture
+users so old commits cannot be silently reattached to a recreated repository.
+
 A production JWT secret has no default — set `JWT_SECRET` before deploying.
 Loco decodes the secret as **base64** to derive its HMAC key, so generate one
 with `openssl rand -base64 32`; a non-base64 value makes login fail with 401.

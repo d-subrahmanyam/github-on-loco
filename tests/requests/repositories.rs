@@ -55,6 +55,64 @@ async fn can_create_and_list_repositories() {
 
 #[tokio::test]
 #[serial]
+async fn refuses_to_reuse_git_data_left_behind_by_a_lost_db_row() {
+    let root = TestRepoRoot::new();
+
+    request::<App, _, _>(|request, ctx| async move {
+        let logged = prepare_data::init_user_login(&request, &ctx).await;
+        let (key, value) = prepare_data::auth_header(&logged.token);
+        let body = json!({
+            "name": "hello-world",
+            "description": null,
+            "is_private": true,
+            "organization": null
+        });
+
+        let created = request
+            .post("/api/repositories")
+            .add_header(key.clone(), value.clone())
+            .json(&body)
+            .await;
+        assert_eq!(created.status_code(), 200, "{}", created.text());
+        let bare = root.bare_repo("loco", "hello-world");
+        assert!(github_loco::data::git::is_bare_repo(&bare));
+
+        // Simulate a DB reset: metadata is gone, but the bare repo survives.
+        use github_loco::models::_entities::repositories;
+        use sea_orm::EntityTrait;
+        let row = repositories::Entity::find()
+            .one(&ctx.db)
+            .await
+            .unwrap()
+            .unwrap();
+        repositories::Entity::delete_by_id(row.id)
+            .exec(&ctx.db)
+            .await
+            .unwrap();
+
+        let again = request
+            .post("/api/repositories")
+            .add_header(key, value)
+            .json(&body)
+            .await;
+        assert_eq!(again.status_code(), 409, "must refuse to reuse stale data");
+        assert!(again.text().contains("already exists"), "{}", again.text());
+        assert_eq!(
+            repositories::Entity::find()
+                .all(&ctx.db)
+                .await
+                .unwrap()
+                .len(),
+            0,
+            "the metadata row from the failed create must be rolled back"
+        );
+        assert!(github_loco::data::git::is_bare_repo(&bare));
+    })
+    .await;
+}
+
+#[tokio::test]
+#[serial]
 async fn rejects_unsafe_repository_names() {
     let _root = TestRepoRoot::new();
 

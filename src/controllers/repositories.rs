@@ -3,18 +3,33 @@
 //! Handlers here only parse input, call one or two model methods and render a
 //! DTO. All naming, ownership and visibility rules live on the model.
 
-use axum::debug_handler;
-use loco_rs::prelude::*;
+use axum::{debug_handler, http::StatusCode};
+use loco_rs::{controller::ErrorDetail, prelude::*};
 use sea_orm::ActiveModelTrait;
 use std::path::Path;
 use tokio::process::Command;
 
-use crate::data::settings::AppSettings;
+use crate::data::{git, settings::AppSettings};
 use crate::dtos::repositories::{CreateRepoParams, RepoResponse};
 use crate::models::{organizations, repositories as repo_model, users};
 
 /// Initialises an empty bare repository on disk at `path`.
+///
+/// Refuses to reuse a directory that already holds a bare repository. Postgres
+/// and git are separate stores, so after a DB reset a stale bare repo can still
+/// be on disk; `git init --bare` would silently succeed and reattach the old
+/// history to a brand-new metadata row. Failing loudly keeps the two in sync.
 async fn init_bare_repo(path: &Path) -> Result<()> {
+    if git::is_bare_repo(path) {
+        return Err(Error::CustomError(
+            StatusCode::CONFLICT,
+            ErrorDetail::with_reason(format!(
+                "a git repository already exists at {}; refusing to reuse stale data",
+                path.display()
+            )),
+        ));
+    }
+
     tokio::fs::create_dir_all(path)
         .await
         .map_err(|e| Error::string(&format!("failed to create repo directory: {e}")))?;
@@ -145,4 +160,60 @@ pub fn routes() -> Routes {
         .prefix("/api/repositories")
         .add("/", post(create))
         .add("/", get(list))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn unique_temp_dir() -> std::path::PathBuf {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        std::env::temp_dir().join(format!("github-loco-init-{nanos}"))
+    }
+
+    #[tokio::test]
+    async fn init_creates_a_fresh_bare_repository() {
+        let base = unique_temp_dir();
+        let path = base.join("subbu").join("fresh.git");
+
+        init_bare_repo(&path).await.unwrap();
+        assert!(git::is_bare_repo(&path));
+
+        std::fs::remove_dir_all(&base).unwrap();
+    }
+
+    #[tokio::test]
+    async fn init_refuses_to_reuse_an_existing_bare_repository() {
+        let base = unique_temp_dir();
+        let path = base.join("subbu").join("hello-world.git");
+
+        init_bare_repo(&path).await.unwrap();
+        // A marker stands in for the old commits that must not be resurrected.
+        tokio::fs::write(path.join("STALE_MARKER"), b"old history")
+            .await
+            .unwrap();
+
+        let error = init_bare_repo(&path).await.unwrap_err();
+        let Error::CustomError(status, detail) = error else {
+            panic!("expected a 409 conflict, got {error:?}");
+        };
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert!(
+            detail
+                .error
+                .as_deref()
+                .is_some_and(|reason| reason.contains("already exists")),
+            "unexpected reason: {detail:?}"
+        );
+        assert_eq!(
+            tokio::fs::read(path.join("STALE_MARKER")).await.unwrap(),
+            b"old history",
+            "the existing repository must be left untouched"
+        );
+
+        std::fs::remove_dir_all(&base).unwrap();
+    }
 }

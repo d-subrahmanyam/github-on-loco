@@ -87,7 +87,11 @@ for obtaining a JWT and building the `Authorization` header.
   storage and logout routing, and rendering of the issue, PR, collaborator,
   fork-list, organization, branch-protection and activity pages. `pnpm build` still type-checks
   everything.
-- **Tasks**: user create/delete.
+- **Git storage consistency**: unit tests for bare-repo detection, safe storage
+  clearing, and that creation refuses to reuse an existing bare repo (409) while
+  leaving its data untouched; a request test simulates a lost DB row and checks
+  that the create is refused and its metadata rolled back.
+- **Tasks**: user create/delete, `dev:reset` (database + git storage + re-seed).
 
 ## Writing a new request test
 
